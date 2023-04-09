@@ -122,6 +122,7 @@ void wakeup(void *);
 void yield(void);
 void update_syscall_status(int);
 int find_most_callee(void);
+int get_alive_children_count(int);
 
 // swtch.S
 void swtch(struct context **, struct context *);

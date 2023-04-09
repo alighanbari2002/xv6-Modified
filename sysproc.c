@@ -88,3 +88,9 @@ int sys_find_most_callee(void)
 {
   return find_most_callee();
 }
+
+int sys_get_alive_children_count(void)
+{
+  int pid = myproc()->pid; // parent process
+  return get_alive_children_count(pid);
+}

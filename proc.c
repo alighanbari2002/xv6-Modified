@@ -565,3 +565,22 @@ int find_most_callee(void)
   }
   return max_used_id;
 }
+
+int get_alive_children_count(int pid)
+{
+  int counter = 0;
+  struct proc *p;
+
+  acquire(&ptable.lock);
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->parent->pid == pid && p->killed == 0) // still alive
+    {
+      counter++;
+      cprintf(" - Child with pid (%d) identified.\n", p->pid);
+    }
+  }
+  release(&ptable.lock);
+
+  return counter;
+}

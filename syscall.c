@@ -101,6 +101,7 @@ extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_find_fibonacci_number(void);
 extern int sys_find_most_callee(void);
+extern int sys_get_alive_children_count(void);
 
 static int (*syscalls[])(void) = {
     [SYS_fork] sys_fork,
@@ -126,6 +127,7 @@ static int (*syscalls[])(void) = {
     [SYS_close] sys_close,
     [SYS_find_fibonacci_number] sys_find_fibonacci_number,
     [SYS_find_most_callee] sys_find_most_callee,
+    [SYS_get_alive_children_count] sys_get_alive_children_count,
 };
 
 void syscall(void)

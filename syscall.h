@@ -22,3 +22,4 @@
 #define SYS_close 21
 #define SYS_find_fibonacci_number 22
 #define SYS_find_most_callee 23
+#define SYS_get_alive_children_count 24
