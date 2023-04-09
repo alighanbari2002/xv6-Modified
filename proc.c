@@ -584,3 +584,17 @@ int get_alive_children_count(int pid)
 
   return counter;
 }
+
+int kill_first_child_process(int pid)
+{
+  struct proc *p;
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->parent->pid == pid && p->killed == 0)
+    {
+      kill(p->pid);
+      return 1; // the child killed successfully
+    }
+  }
+  return 0; // parent has no child!
+}

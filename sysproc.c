@@ -94,3 +94,9 @@ int sys_get_alive_children_count(void)
   int pid = myproc()->pid; // parent process
   return get_alive_children_count(pid);
 }
+
+int sys_kill_first_child_process(void)
+{
+  int pid = myproc()->pid; // parent process
+  return kill_first_child_process(pid);
+}

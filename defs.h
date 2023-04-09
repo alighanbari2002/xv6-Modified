@@ -123,6 +123,7 @@ void yield(void);
 void update_syscall_status(int);
 int find_most_callee(void);
 int get_alive_children_count(int);
+int kill_first_child_process(int);
 
 // swtch.S
 void swtch(struct context **, struct context *);

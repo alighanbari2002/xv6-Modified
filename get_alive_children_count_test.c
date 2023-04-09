@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 
     while (wait() != -1)
     { // wait for all children to die,
-    } // otherwise they will be zombies.
+    } // otherwise they will become zombies.
 
     sleep(1);
     exit();

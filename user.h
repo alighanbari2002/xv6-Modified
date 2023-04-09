@@ -26,6 +26,7 @@ int uptime(void);
 int find_fibonacci_number(void);
 int find_most_callee(void);
 int get_alive_children_count(void);
+int kill_first_child_process(void);
 
 // ulib.c
 int stat(const char *, struct stat *);
