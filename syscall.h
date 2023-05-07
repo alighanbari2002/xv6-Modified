@@ -25,3 +25,4 @@
 #define SYS_get_alive_children_count 24
 #define SYS_kill_first_child_process 25
 #define SYS_set_lottery_ticket 26
+#define SYS_change_sched_queue 27

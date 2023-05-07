@@ -761,6 +761,21 @@ int set_lottery_ticket(int pid, int tickets)
   return -1;
 }
 
+int change_sched_queue(int pid, int qnum)
+{
+  acquire(&ptable.lock);
+  struct proc* p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->pid == pid)
+    {
+      p->schedQ = qnum;
+    }
+  }
+  release(&ptable.lock);
+  return -1;
+}
+
 void finishing_time_slot()
 {
   struct proc *p;

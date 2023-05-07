@@ -46,9 +46,9 @@ enum procstate
 
 enum schedQueue
 {
-  FCFS,
   ROUND_ROBIN,
   LOTTERY,
+  FCFS,
 };
 
 // Per-process state

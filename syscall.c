@@ -104,6 +104,7 @@ extern int sys_find_most_callee(void);
 extern int sys_get_alive_children_count(void);
 extern int sys_kill_first_child_process(void);
 extern int sys_set_lottery_ticket(void);
+extern int sys_change_sched_queue(void);
 
 static int (*syscalls[])(void) = {
     [SYS_fork] sys_fork,
@@ -132,6 +133,7 @@ static int (*syscalls[])(void) = {
     [SYS_get_alive_children_count] sys_get_alive_children_count,
     [SYS_kill_first_child_process] sys_kill_first_child_process,
     [SYS_set_lottery_ticket] sys_set_lottery_ticket,
+    [SYS_change_sched_queue] sys_change_sched_queue,
 };
 
 void syscall(void)

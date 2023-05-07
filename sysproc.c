@@ -112,3 +112,14 @@ int sys_set_lottery_ticket(void)
 
   return set_lottery_ticket(pid, tickets);
 }
+
+int sys_change_sched_queue(void)
+{
+  int pid, qnum;
+  if (argint(0, &pid) < 0 || argint(1, &qnum) < 0)
+    return -1;
+
+  if (qnum < ROUND_ROBIN || qnum > FCFS)
+    return -1;
+  return change_sched_queue(pid, qnum);
+}
