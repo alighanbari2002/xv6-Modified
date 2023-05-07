@@ -439,7 +439,7 @@ void scheduler(void)
       struct proc* first_find;
       if((first_find = find_existed_sched(ROUND_ROBIN)) != NULLPTR)
       {
-        p =find_runnable_ROUND_ROBIN();
+        p = find_runnable_ROUND_ROBIN();
       }
       else if((first_find = find_existed_sched(LOTTERY)) != NULLPTR)
       {
@@ -701,4 +701,18 @@ int kill_first_child_process(int pid)
     }
   }
   return 0; // parent has no child!
+}
+
+struct proc* finishing_time_slot()
+{
+  struct proc* p;
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->state == RUNNING && p->schedQ == ROUND_ROBIN && ticks-p->last_running > MAX_TIME_SLOT)
+    {
+      yield(); // force process out
+    }
+  }
+  release(&ptable.lock);
 }

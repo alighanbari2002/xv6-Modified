@@ -76,4 +76,5 @@ struct proc
 #define QUEUE_NUM 3
 #define NULLPTR 0
 #define MAX_STARVING_TIME 8000
+#define MAX_TIME_SLOT 10
 // 21 system calls already exists in xv6 and we added 4 system calls
