@@ -7,7 +7,6 @@
 #include "proc.h"
 #include "spinlock.h"
 
-
 int used_sys_call[SYSTEMCALLS_COUNT] = {0};
 // a global array that shows how many times each system call has been called
 
@@ -184,12 +183,12 @@ int growproc(int n)
 
 enum schedQueue set_sched_queue(int pid)
 {
-  
-  if(pid % QUEUE_NUM == 1)
+
+  if (pid % QUEUE_NUM == 1)
   {
     return ROUND_ROBIN;
   }
-  else if(pid % QUEUE_NUM == 2)
+  else if (pid % QUEUE_NUM == 2)
   {
     return LOTTERY;
   }
@@ -204,22 +203,23 @@ int generate_random_number(int seed)
   int rand_num = seed * ticks;
   rand_num *= 5;
   rand_num += 238721;
-  rand_num/2;
+  rand_num /= 2;
+  return rand_num;
 }
 
 int sum_of_lottery()
 {
   int sum = 0;
-  struct proc* p;
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  struct proc *p;
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
-    if(p->state == RUNNABLE && p->schedQ == LOTTERY)
+    if (p->state == RUNNABLE && p->schedQ == LOTTERY)
     {
       sum += p->ticket;
     }
   }
+  return sum;
 }
-
 
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
@@ -371,15 +371,16 @@ int wait(void)
   }
 }
 
+static struct proc *last_rr_proc = NULLPTR;
 
-struct proc* find_existed_sched(enum schedQueue sQ)
+struct proc *find_existed_sched(enum schedQueue sQ)
 {
-  struct proc* p;
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; ++p)
+  struct proc *p;
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; ++p)
   {
-    if(p->schedQ == sQ && p->state == RUNNABLE) 
+    if (p->schedQ == sQ && p->state == RUNNABLE)
     {
-      if(sQ == ROUND_ROBIN && last_rr_proc == NULLPTR)
+      if (sQ == ROUND_ROBIN && last_rr_proc == NULLPTR)
       {
         last_rr_proc = p;
       }
@@ -389,32 +390,32 @@ struct proc* find_existed_sched(enum schedQueue sQ)
   return NULLPTR;
 }
 
-struct proc* find_runnable_LOTTERY()
+struct proc *find_runnable_LOTTERY()
 {
-  int sum = sum_of_lottery();
   int lot_result = generate_random_number(ticks) % sum_of_lottery();
-  struct proc* p;
+  struct proc *p;
   int ptable_sum = 0;
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
-    if(p->state == RUNNABLE && p->schedQ == LOTTERY)
+    if (p->state == RUNNABLE && p->schedQ == LOTTERY)
     {
       ptable_sum += p->ticket;
-      if(ptable_sum > lot_result)
+      if (ptable_sum > lot_result)
       {
         return p;
       }
     }
   }
+  return NULLPTR;
 }
 
-struct proc* find_runnable_FCFS(struct proc* fp)
+struct proc *find_runnable_FCFS(struct proc *fp)
 {
-  struct proc* temp;
-  struct proc* p = fp;
-  for(temp = ptable.proc; temp < &ptable.proc[NPROC]; temp++)
+  struct proc *temp;
+  struct proc *p = fp;
+  for (temp = ptable.proc; temp < &ptable.proc[NPROC]; temp++)
   {
-    if(temp->state == RUNNABLE && temp->schedQ == FCFS && temp->pid < p->pid)
+    if (temp->state == RUNNABLE && temp->schedQ == FCFS && temp->pid < p->pid)
     {
       p = temp;
     }
@@ -422,21 +423,19 @@ struct proc* find_runnable_FCFS(struct proc* fp)
   return p;
 }
 
-struct proc* last_rr_proc = NULLPTR;
-
-struct proc* find_runnable_ROUND_ROBIN()
+struct proc *find_runnable_ROUND_ROBIN()
 {
-  struct proc* p = last_rr_proc + 1;
+  struct proc *p = last_rr_proc + 1;
 
-  while(1)
+  while (1)
   {
-    if(p->state == RUNNABLE && p->schedQ == ROUND_ROBIN)
+    if (p->state == RUNNABLE && p->schedQ == ROUND_ROBIN)
     {
       last_rr_proc = p;
       return p;
     }
     p++;
-    if(p > &ptable.proc[NPROC])
+    if (p > &ptable.proc[NPROC])
     {
       p = ptable.proc;
     }
@@ -445,10 +444,10 @@ struct proc* find_runnable_ROUND_ROBIN()
 
 void aging_mechanism()
 {
-  struct proc* p;
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  struct proc *p;
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
-    if(p->state == RUNNABLE && p->schedQ != ROUND_ROBIN && p->last_running > MAX_STARVING_TIME)
+    if (p->state == RUNNABLE && p->schedQ != ROUND_ROBIN && p->last_running > MAX_STARVING_TIME)
     {
       p->schedQ = ROUND_ROBIN;
     }
@@ -479,16 +478,16 @@ void scheduler(void)
     aging_mechanism();
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     {
-      struct proc* first_find;
-      if((first_find = find_existed_sched(ROUND_ROBIN)) != NULLPTR)
+      struct proc *first_find;
+      if ((first_find = find_existed_sched(ROUND_ROBIN)) != NULLPTR)
       {
         p = find_runnable_ROUND_ROBIN();
       }
-      else if((first_find = find_existed_sched(LOTTERY)) != NULLPTR)
+      else if ((first_find = find_existed_sched(LOTTERY)) != NULLPTR)
       {
         p = find_runnable_LOTTERY();
       }
-      else if((first_find = find_existed_sched(FCFS)) != NULLPTR)
+      else if ((first_find = find_existed_sched(FCFS)) != NULLPTR)
       {
         p = find_runnable_FCFS(first_find);
       }
@@ -746,13 +745,29 @@ int kill_first_child_process(int pid)
   return 0; // parent has no child!
 }
 
-struct proc* finishing_time_slot()
+int set_lottery_ticket(int pid, int tickets)
 {
-  struct proc* p;
   acquire(&ptable.lock);
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  struct proc *p;
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
-    if(p->state == RUNNING && p->schedQ == ROUND_ROBIN && ticks-p->last_running > MAX_TIME_SLOT)
+    if (p->pid == pid && p->schedQ == LOTTERY)
+    {
+      p->ticket = tickets;
+      return 0;
+    }
+  }
+  release(&ptable.lock);
+  return -1;
+}
+
+void finishing_time_slot()
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->state == RUNNING && p->schedQ == ROUND_ROBIN && ticks - p->last_running > MAX_TIME_SLOT)
     {
       yield(); // force process out
     }

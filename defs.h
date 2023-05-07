@@ -124,7 +124,8 @@ void update_syscall_status(int);
 int find_most_callee(void);
 int get_alive_children_count(int);
 int kill_first_child_process(int);
-struct proc* finishing_time_slot();
+void finishing_time_slot();
+int set_lottery_ticket(int, int);
 
 // swtch.S
 void swtch(struct context **, struct context *);

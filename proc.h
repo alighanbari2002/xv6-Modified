@@ -44,7 +44,12 @@ enum procstate
   ZOMBIE
 };
 
-enum schedQueue {FCFS, ROUND_ROBIN, LOTTERY,};
+enum schedQueue
+{
+  FCFS,
+  ROUND_ROBIN,
+  LOTTERY,
+};
 
 // Per-process state
 struct proc

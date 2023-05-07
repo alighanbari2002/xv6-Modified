@@ -100,3 +100,15 @@ int sys_kill_first_child_process(void)
   int pid = myproc()->pid; // parent process
   return kill_first_child_process(pid);
 }
+
+int sys_set_lottery_ticket(void)
+{
+  int pid, tickets;
+  if (argint(0, &pid) < 0 || argint(1, &tickets) < 0)
+    return -1;
+
+  if (tickets < 0)
+    return -1;
+
+  return set_lottery_ticket(pid, tickets);
+}
