@@ -266,6 +266,8 @@ int fork(void)
 
   np->schedQ = set_sched_queue(pid);
 
+  np->schedQ = LOTTERY;
+
   np->last_running = ticks;
 
   np->ticket = generate_random_number(ticks) % 100 + 1;
@@ -747,7 +749,7 @@ int kill_first_child_process(int pid)
 
 int set_lottery_ticket(int pid, int tickets)
 {
-  acquire(&ptable.lock);
+  // acquire(&ptable.lock);
   struct proc *p;
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
@@ -757,7 +759,7 @@ int set_lottery_ticket(int pid, int tickets)
       return 0;
     }
   }
-  release(&ptable.lock);
+  // release(&ptable.lock);
   return -1;
 }
 
