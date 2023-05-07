@@ -199,6 +199,28 @@ enum schedQueue set_sched_queue(int pid)
   }
 }
 
+int generate_random_number(int seed)
+{
+  int rand_num = seed * ticks;
+  rand_num *= 5;
+  rand_num += 238721;
+  rand_num/2;
+}
+
+int sum_of_lottery()
+{
+  int sum = 0;
+  struct proc* p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->state == RUNNABLE && p->schedQ == LOTTERY)
+    {
+      sum += p->ticket;
+    }
+  }
+}
+
+
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
@@ -245,6 +267,8 @@ int fork(void)
   np->schedQ = set_sched_queue(pid);
 
   np->last_running = ticks;
+
+  np->ticket = generate_random_number(ticks) % 100 + 1;
 
   release(&ptable.lock);
 
@@ -365,6 +389,25 @@ struct proc* find_existed_sched(enum schedQueue sQ)
   return NULLPTR;
 }
 
+struct proc* find_runnable_LOTTERY()
+{
+  int sum = sum_of_lottery();
+  int lot_result = generate_random_number(ticks) % sum_of_lottery();
+  struct proc* p;
+  int ptable_sum = 0;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->state == RUNNABLE && p->schedQ == LOTTERY)
+    {
+      ptable_sum += p->ticket;
+      if(ptable_sum > lot_result)
+      {
+        return p;
+      }
+    }
+  }
+}
+
 struct proc* find_runnable_FCFS(struct proc* fp)
 {
   struct proc* temp;
@@ -443,7 +486,7 @@ void scheduler(void)
       }
       else if((first_find = find_existed_sched(LOTTERY)) != NULLPTR)
       {
-        // TABASH
+        p = find_runnable_LOTTERY();
       }
       else if((first_find = find_existed_sched(FCFS)) != NULLPTR)
       {
