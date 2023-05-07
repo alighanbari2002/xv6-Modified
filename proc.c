@@ -7,6 +7,7 @@
 #include "proc.h"
 #include "spinlock.h"
 
+
 int used_sys_call[SYSTEMCALLS_COUNT] = {0};
 // a global array that shows how many times each system call has been called
 
@@ -181,6 +182,23 @@ int growproc(int n)
   return 0;
 }
 
+enum schedQueue set_sched_queue(int pid)
+{
+  
+  if(pid % QUEUE_NUM == 1)
+  {
+    return ROUND_ROBIN;
+  }
+  else if(pid % QUEUE_NUM == 2)
+  {
+    return LOTTERY;
+  }
+  else
+  {
+    return FCFS;
+  }
+}
+
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
@@ -223,6 +241,9 @@ int fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+
+  np->schedQ = set_sched_queue(pid);
+
 
   release(&ptable.lock);
 
@@ -325,6 +346,33 @@ int wait(void)
   }
 }
 
+
+struct proc* find_existed_sched(enum schedQueue sQ)
+{
+  struct proc* p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; ++p)
+  {
+    if(p->schedQ == sQ && p->state == RUNNABLE) 
+    {
+      return p;
+    }
+  }
+  return NULLPTR;
+}
+
+struct proc* find_runnable_fcfs(struct proc* fp)
+{
+  struct proc* temp;
+  struct proc* p = fp;
+  for(temp = ptable.proc; temp < &ptable.proc[NPROC]; temp++)
+  {
+    if(temp->state == RUNNABLE && temp->schedQ == FCFS && temp->pid < p->pid)
+    {
+      p = temp;
+    }
+  }
+  return p;
+}
 // PAGEBREAK: 42
 //  Per-CPU process scheduler.
 //  Each CPU calls scheduler() after setting itself up.
@@ -346,8 +394,23 @@ void scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    //
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     {
+      struct proc* first_find;
+      if((first_find = find_existed_sched(ROUND_ROBIN)) != NULLPTR)
+      {
+        // TABASH
+      }
+      else if((first_find = find_existed_sched(LOTTERY)) != NULLPTR)
+      {
+        // TABASH
+      }
+      else if((first_find = find_existed_sched(FCFS)) != NULLPTR)
+      {
+        p = find_runnable_fcfs(first_find);
+      }
+
       if (p->state != RUNNABLE)
         continue;
 
@@ -365,6 +428,7 @@ void scheduler(void)
       // It should have changed its p->state before coming back.
       c->proc = 0;
     }
+    //
     release(&ptable.lock);
   }
 }

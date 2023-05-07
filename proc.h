@@ -44,6 +44,8 @@ enum procstate
   ZOMBIE
 };
 
+enum schedQueue {FCFS, ROUND_ROBIN, LOTTERY,};
+
 // Per-process state
 struct proc
 {
@@ -60,6 +62,7 @@ struct proc
   struct file *ofile[NOFILE]; // Open files
   struct inode *cwd;          // Current directory
   char name[16];              // Process name (debugging)
+  enum schedQueue schedQ;
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -69,4 +72,6 @@ struct proc
 //   expandable heap
 
 #define SYSTEMCALLS_COUNT 25
+#define QUEUE_NUM 3
+#define NULLPTR 0
 // 21 system calls already exists in xv6 and we added 4 system calls
