@@ -12,7 +12,7 @@ void help()
 
 void info()
 {
-    print_process_info();
+    print_proc_info();
 }
 
 void set_queue(int pid, int new_queue)
@@ -27,7 +27,7 @@ void set_queue(int pid, int new_queue)
         printf(1, "Invalid queue\n");
         return;
     }
-    int res = change_scheduling_queue(pid, new_queue);
+    int res = change_sched_queue(pid, new_queue);
     if (res < 0)
         printf(1, "Error changing queue\n");
     else
