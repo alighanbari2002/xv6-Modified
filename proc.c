@@ -244,6 +244,7 @@ int fork(void)
 
   np->schedQ = set_sched_queue(pid);
 
+  np->last_running = ticks;
 
   release(&ptable.lock);
 
@@ -360,7 +361,7 @@ struct proc* find_existed_sched(enum schedQueue sQ)
   return NULLPTR;
 }
 
-struct proc* find_runnable_fcfs(struct proc* fp)
+struct proc* find_runnable_FCFS(struct proc* fp)
 {
   struct proc* temp;
   struct proc* p = fp;
@@ -372,6 +373,23 @@ struct proc* find_runnable_fcfs(struct proc* fp)
     }
   }
   return p;
+}
+
+// struct proc* find_runnable_ROUND_ROBIN(struct proc* fp)
+// {
+//   struct proc* p = fp;
+// }
+
+void aging_mechanism()
+{
+  struct proc* p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->state == RUNNABLE && p->schedQ != ROUND_ROBIN && p->last_running > MAX_STARVING_TIME)
+    {
+      p->schedQ = ROUND_ROBIN;
+    }
+  }
 }
 // PAGEBREAK: 42
 //  Per-CPU process scheduler.
@@ -395,6 +413,7 @@ void scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     //
+    aging_mechanism();
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     {
       struct proc* first_find;
@@ -408,7 +427,7 @@ void scheduler(void)
       }
       else if((first_find = find_existed_sched(FCFS)) != NULLPTR)
       {
-        p = find_runnable_fcfs(first_find);
+        p = find_runnable_FCFS(first_find);
       }
 
       if (p->state != RUNNABLE)
@@ -420,6 +439,7 @@ void scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
+      p->last_running = ticks; // update last time proc was running
 
       swtch(&(c->scheduler), p->context);
       switchkvm();

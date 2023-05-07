@@ -63,6 +63,7 @@ struct proc
   struct inode *cwd;          // Current directory
   char name[16];              // Process name (debugging)
   enum schedQueue schedQ;
+  int last_running;
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -74,4 +75,5 @@ struct proc
 #define SYSTEMCALLS_COUNT 25
 #define QUEUE_NUM 3
 #define NULLPTR 0
+#define MAX_STARVING_TIME 8000
 // 21 system calls already exists in xv6 and we added 4 system calls
