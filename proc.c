@@ -761,6 +761,26 @@ int set_lottery_ticket(int pid, int tickets)
   return -1;
 }
 
+void print_proc_info(void)
+{
+  char *states[] = {
+  [UNUSED] "UNUSED",
+  [EMBRYO] "EMBRYO",
+  [SLEEPING] "SLEEPING",
+  [RUNNABLE] "RUNNABLE",
+  [RUNNING] "RUNNING",
+  [ZOMBIE] "ZOMBIE"
+};
+  cprintf("name           pid         state        queue    arrive time        ticket      cycle\n");
+  cprintf("......................................................................................\n");
+  struct proc* p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    cprintf("%s            %d          %s           %d       %d                 %d          %d\n",
+    p->name, p->pid, states[p->state], p->schedQ, p->last_running, p->ticket, ticks-p->last_running);
+  }
+}
+
 int change_sched_queue(int pid, int qnum)
 {
   acquire(&ptable.lock);

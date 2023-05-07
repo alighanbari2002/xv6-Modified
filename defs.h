@@ -127,6 +127,7 @@ int kill_first_child_process(int);
 void finishing_time_slot();
 int set_lottery_ticket(int, int);
 int change_sched_queue(int, int);
+void print_proc_info(void);
 
 // swtch.S
 void swtch(struct context **, struct context *);

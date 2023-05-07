@@ -29,6 +29,7 @@ int get_alive_children_count(void);
 int kill_first_child_process(void);
 int set_lottery_ticket(int, int);
 int change_sched_queue(int, int);
+void print_proc_info(void);
 
 // ulib.c
 int stat(const char *, struct stat *);

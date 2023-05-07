@@ -113,6 +113,12 @@ int sys_set_lottery_ticket(void)
   return set_lottery_ticket(pid, tickets);
 }
 
+int sys_print_proc_info(void)
+{
+  print_proc_info();
+  return 0;
+}
+
 int sys_change_sched_queue(void)
 {
   int pid, qnum;
