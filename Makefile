@@ -188,6 +188,8 @@ UPROGS=\
 	_find_most_callee_test\
 	_get_alive_children_count_test\
 	_kill_first_child_process_test\
+	_schedule\
+	_foo\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
