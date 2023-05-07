@@ -265,8 +265,6 @@ int fork(void)
   np->state = RUNNABLE;
 
   np->schedQ = set_sched_queue(pid);
-  
-  np->schedQ = LOTTERY;
 
   np->last_running = ticks;
 
@@ -766,30 +764,29 @@ int set_lottery_ticket(int pid, int tickets)
 void print_proc_info(void)
 {
   char *states[] = {
-  [UNUSED] "UNUSED",
-  [EMBRYO] "EMBRYO",
-  [SLEEPING] "SLEEPING",
-  [RUNNABLE] "RUNNABLE",
-  [RUNNING] "RUNNING",
-  [ZOMBIE] "ZOMBIE"
-};
+      [UNUSED] "UNUSED",
+      [EMBRYO] "EMBRYO",
+      [SLEEPING] "SLEEPING",
+      [RUNNABLE] "RUNNABLE",
+      [RUNNING] "RUNNING",
+      [ZOMBIE] "ZOMBIE"};
   cprintf("name           pid         state        queue    arrive time        ticket      cycle\n");
   cprintf("......................................................................................\n");
-  struct proc* p;
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  struct proc *p;
+  for (p = ptable.proc; p->state != UNUSED && p < &ptable.proc[NPROC]; p++)
   {
     cprintf("%s            %d          %s           %d       %d                 %d          %d\n",
-    p->name, p->pid, states[p->state], p->schedQ, p->last_running, p->ticket, ticks-p->last_running);
+            p->name, p->pid, states[p->state], p->schedQ, p->last_running, p->ticket, ticks - p->last_running);
   }
 }
 
 int change_sched_queue(int pid, int qnum)
 {
   acquire(&ptable.lock);
-  struct proc* p;
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  struct proc *p;
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
-    if(p->pid == pid)
+    if (p->pid == pid)
     {
       p->schedQ = qnum;
     }
