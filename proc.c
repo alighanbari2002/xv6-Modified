@@ -355,6 +355,10 @@ struct proc* find_existed_sched(enum schedQueue sQ)
   {
     if(p->schedQ == sQ && p->state == RUNNABLE) 
     {
+      if(sQ == ROUND_ROBIN && last_rr_proc == NULLPTR)
+      {
+        last_rr_proc = p;
+      }
       return p;
     }
   }
@@ -375,10 +379,24 @@ struct proc* find_runnable_FCFS(struct proc* fp)
   return p;
 }
 
-// struct proc* find_runnable_ROUND_ROBIN(struct proc* fp)
-// {
-//   struct proc* p = fp;
-// }
+struct proc* last_rr_proc = NULLPTR;
+
+struct proc* find_runnable_ROUND_ROBIN(struct proc* fp)
+{
+  struct proc* p = last_rr_proc + 1;
+  // for(p = last_rr_proc + 1; p < &ptable.proc[NPROC]; p++)
+  // {
+  //   if(p->state == RUNNABLE && p->schedQ == ROUND_ROBIN)
+  // }
+  while(1)
+  {
+    if(p->state == RUNNABLE && p->schedQ == ROUND_ROBIN)
+    {
+
+    }
+    p++;
+  }
+}
 
 void aging_mechanism()
 {
