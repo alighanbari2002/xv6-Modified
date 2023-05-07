@@ -265,6 +265,8 @@ int fork(void)
   np->state = RUNNABLE;
 
   np->schedQ = set_sched_queue(pid);
+  
+  np->schedQ = LOTTERY;
 
   np->last_running = ticks;
 
