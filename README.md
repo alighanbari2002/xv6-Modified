@@ -1,6 +1,4 @@
 # Operating-System-Lab
-Second Computer Assignment of Operating System Labrotary
-
 
 Contributors: [**Ali Ghanbari**](https://github.com/alighanbari2002) & [**Behrad Elmi**](https://github.com/BehradElmi) & [**Bita Nasiri**](https://github.com/bita-nasiri)
 
