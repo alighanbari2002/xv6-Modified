@@ -562,7 +562,7 @@ void forkret(void)
   if (first)
   {
     // Some initialization functions must be run in the context
-    // of a regular process (e.g., they call sleep), and thus cannot
+    // of a regular process (e.g., they call sleep), and thus cannot-------------------------------------------
     // be run from main().
     first = 0;
     iinit(ROOTDEV);
