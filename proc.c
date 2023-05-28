@@ -33,6 +33,8 @@ struct
 static struct proc *initproc;
 
 int nextpid = 1;
+int readers_cnt = 0;
+int writers_cnt = 0;
 extern void forkret(void);
 extern void trapret(void);
 
@@ -929,4 +931,37 @@ void cv_wait(void *condvar)
 void cv_signal(void *condvar)
 {
   wakeup(condvar);
+}
+
+int test_variable = 0;
+
+void reader(int i, void *condvar)
+{
+  readers_cnt++;
+  cprintf("reader %d init\n", i);
+  if (writers_cnt)
+  {
+    cv_wait(&condvar);
+  }
+  cprintf("reader %d reads one item from buffer\n", i);
+  cprintf("number of active readers: %d\n", readers_cnt);
+  readers_cnt--;
+  cv_signal(&condvar);
+}
+
+void writer(int i, void *condvar)
+{
+  cprintf("readers: %d\n", readers_cnt);
+  cprintf("writer %d init\n", i);
+  if (readers_cnt || writers_cnt)
+  {
+    cv_wait(&condvar);
+  }
+  writers_cnt++;
+  test_variable++;
+  cprintf("test varibale is %d\n", test_variable);
+  cprintf("writer %d writes next item in buffer\n", i);
+  cprintf("number of active writers: %d\n", writers_cnt);
+  writers_cnt--;
+  cv_signal(&condvar);
 }

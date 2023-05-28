@@ -113,6 +113,8 @@ extern int sys_producer(void);
 extern int sys_consumer(void);
 extern int sys_cv_wait(void);
 extern int sys_cv_signal(void);
+extern int sys_reader(void);
+extern int sys_writer(void);
 
 static int (*syscalls[])(void) = {
     [SYS_fork] sys_fork,
@@ -150,6 +152,8 @@ static int (*syscalls[])(void) = {
     [SYS_consumer] sys_consumer,
     [SYS_cv_wait] sys_cv_wait,
     [SYS_cv_signal] sys_cv_signal,
+    [SYS_reader] sys_reader,
+    [SYS_writer] sys_writer,
 };
 
 void syscall(void)

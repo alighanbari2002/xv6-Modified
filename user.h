@@ -39,6 +39,8 @@ void producer(int);
 void consumer(int);
 void cv_wait(struct condvar *);
 void cv_signal(struct condvar *);
+void reader(int, struct condvar *);
+void writer(int, struct condvar *);
 
 // ulib.c
 int stat(const char *, struct stat *);

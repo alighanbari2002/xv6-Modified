@@ -179,16 +179,38 @@ void sys_consumer(void)
 
 void sys_cv_wait(void)
 {
-  struct condvar *condvar;
-  if (argptr(0, (void *)&condvar, sizeof(condvar)) < 0)
+  struct condvar *c;
+  if (argptr(0, (void *)&c, sizeof(c)) < 0)
     return;
-  cv_wait(condvar);
+  cv_wait(c);
 }
 
 void sys_cv_signal(void)
 {
-  struct condvar *condvar;
-  if (argptr(0, (void *)&condvar, sizeof(condvar)) < 0)
+  struct condvar *c;
+  if (argptr(0, (void *)&c, sizeof(c)) < 0)
     return;
-  cv_signal(condvar);
+  cv_signal(c);
+}
+
+void sys_reader(void)
+{
+  struct condvar *condvar;
+  int i;
+  if (argint(0, &i) < 0)
+    return;
+  if (argptr(1, (void *)&condvar, sizeof(condvar)) < 0)
+    return;
+  reader(i, condvar);
+}
+
+void sys_writer(void)
+{
+  struct condvar *condvar;
+  int i;
+  if (argint(0, &i) < 0)
+    return;
+  if (argptr(1, (void *)&condvar, sizeof(condvar)) < 0)
+    return;
+  writer(i, condvar);
 }

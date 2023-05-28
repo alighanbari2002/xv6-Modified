@@ -34,3 +34,5 @@
 #define SYS_consumer 33
 #define SYS_cv_wait 34
 #define SYS_cv_signal 35
+#define SYS_reader 36
+#define SYS_writer 37

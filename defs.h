@@ -137,6 +137,8 @@ void consumer(int);
 void cv_wait(void *);
 void cv_signal(void *);
 void to_sleep(void *);
+void reader(int, void *);
+void writer(int, void *);
 
 // swtch.S
 void swtch(struct context **, struct context *);
