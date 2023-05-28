@@ -78,7 +78,7 @@ struct proc
 //   fixed-size stack
 //   expandable heap
 
-#define SYSTEMCALLS_COUNT 25
+#define SYSTEMCALLS_COUNT 35
 #define QUEUE_NUM 3
 #define NULLPTR 0
 #define MAX_STARVING_TIME 8000
