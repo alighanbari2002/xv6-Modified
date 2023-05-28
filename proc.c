@@ -16,6 +16,15 @@ struct
   struct proc proc[NPROC];
 } ptable;
 
+struct
+{
+  struct spinlock lock;
+  struct proc *proc[NPROC];
+  int last;
+  int v;
+  int m;
+} semaphores[5];
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -809,4 +818,53 @@ void finishing_time_slot()
     }
   }
   release(&ptable.lock);
+}
+
+void sem_init(int i, int v_, int m_)
+{
+  acquire(&semaphores[i].lock);
+  semaphores[i].v = v_;
+  semaphores[i].m = m_;
+  semaphores[i].last = 0;
+  release(&semaphores[i].lock);
+}
+
+void sem_acquire(int i)
+{
+  acquire(&semaphores[i].lock);
+  if (semaphores[i].m < semaphores[i].v)
+  {
+    semaphores[i].m++;
+  }
+  else
+  {
+    semaphores[i].proc[semaphores[i].last] = myproc();
+    semaphores[i].last++;
+    sleep(myproc(), &semaphores[i].lock);
+  }
+  release(&semaphores[i].lock);
+}
+
+void sem_release(int i)
+{
+  acquire(&semaphores[i].lock);
+  if (semaphores[i].m < semaphores[i].v && semaphores[i].m > 0)
+  {
+    semaphores[i].m--;
+  }
+  else if (semaphores[i].m == semaphores[i].v)
+  {
+    if (semaphores[i].last == 0)
+    {
+      semaphores[i].m--;
+    }
+    else
+    {
+      wakeup(semaphores[i].proc[0]);
+      for (int j = 1; j < NPROC; j++)
+        semaphores[i].proc[j - 1] = semaphores[i].proc[j];
+      semaphores[i].last--;
+    }
+  }
+  release(&semaphores[i].lock);
 }

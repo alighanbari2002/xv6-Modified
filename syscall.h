@@ -27,3 +27,6 @@
 #define SYS_set_lottery_ticket 26
 #define SYS_change_sched_queue 27
 #define SYS_print_proc_info 28
+#define SYS_sem_init 29
+#define SYS_sem_acquire 30
+#define SYS_sem_release 31

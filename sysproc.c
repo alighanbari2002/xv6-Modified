@@ -129,3 +129,34 @@ int sys_change_sched_queue(void)
     return -1;
   return change_sched_queue(pid, qnum);
 }
+
+void sys_sem_init(void)
+{
+  int i, v, m;
+  if (argint(0, &i) < 0)
+    return;
+  if (argint(1, &v) < 0)
+    return;
+  if (argint(2, &m) < 0)
+    return;
+  sem_init(i, v, m);
+  return;
+}
+
+void sys_sem_acquire(void)
+{
+  int i;
+  if (argint(0, &i) < 0)
+    return;
+  sem_acquire(i);
+  return;
+}
+
+void sys_sem_release(void)
+{
+  int i;
+  if (argint(0, &i) < 0)
+    return;
+  sem_release(i);
+  return;
+}
