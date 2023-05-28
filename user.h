@@ -1,5 +1,7 @@
+#include "types.h"
 struct stat;
 struct rtcdate;
+struct condvar;
 
 // system calls
 int fork(void);
@@ -30,6 +32,13 @@ int kill_first_child_process(void);
 int set_lottery_ticket(int, int);
 int change_sched_queue(int, int);
 void print_proc_info(void);
+void sem_init(int, int, int);
+void sem_acquire(int);
+void sem_release(int);
+void producer(int);
+void consumer(int);
+void cv_wait(struct condvar *);
+void cv_signal(struct condvar *);
 
 // ulib.c
 int stat(const char *, struct stat *);
@@ -44,6 +53,3 @@ void *memset(void *, int, uint);
 void *malloc(uint);
 void free(void *);
 int atoi(const char *);
-void sem_init(int, int, int);
-void sem_acquire(int);
-void sem_release(int);

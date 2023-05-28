@@ -190,6 +190,8 @@ UPROGS=\
 	_kill_first_child_process_test\
 	_schedule\
 	_foo\
+	_sem_test\
+	_condvar_test\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

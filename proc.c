@@ -25,6 +25,11 @@ struct
   int m;
 } semaphores[5];
 
+struct
+{
+  struct spinlock lock;
+} condvar;
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -867,4 +872,61 @@ void sem_release(int i)
     }
   }
   release(&semaphores[i].lock);
+}
+
+void producer(int i)
+{
+  while (i < 10)
+  {
+    cprintf("produce an item %d in next produced\n", i);
+    sem_acquire(1);
+    sem_acquire(0);
+    cprintf("add next produced to the buffer\n");
+    sem_release(0);
+    sem_release(2);
+    i++;
+  }
+}
+
+void consumer(int i)
+{
+  while (i < 10)
+  {
+    sem_acquire(2);
+    sem_acquire(0);
+    cprintf("remove an item from buffer to next consumed\n");
+    sem_release(0);
+    sem_release(1);
+    cprintf("consume the item %d in next consumed\n", i);
+    i++;
+  }
+}
+
+void to_sleep(void *chan)
+{
+  struct proc *p = myproc();
+
+  if (p == 0)
+    panic("sleep");
+
+  acquire(&ptable.lock);
+
+  p->chan = chan;
+  p->state = SLEEPING;
+
+  sched();
+
+  p->chan = 0;
+
+  release(&ptable.lock);
+}
+
+void cv_wait(void *condvar)
+{
+  to_sleep(condvar);
+}
+
+void cv_signal(void *condvar)
+{
+  wakeup(condvar);
 }

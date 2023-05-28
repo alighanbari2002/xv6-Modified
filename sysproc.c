@@ -160,3 +160,35 @@ void sys_sem_release(void)
   sem_release(i);
   return;
 }
+
+void sys_producer(void)
+{
+  int i;
+  if (argint(0, &i) < 0)
+    return;
+  producer(i);
+}
+
+void sys_consumer(void)
+{
+  int i;
+  if (argint(0, &i) < 0)
+    return;
+  consumer(i);
+}
+
+void sys_cv_wait(void)
+{
+  struct condvar *condvar;
+  if (argptr(0, (void *)&condvar, sizeof(condvar)) < 0)
+    return;
+  cv_wait(condvar);
+}
+
+void sys_cv_signal(void)
+{
+  struct condvar *condvar;
+  if (argptr(0, (void *)&condvar, sizeof(condvar)) < 0)
+    return;
+  cv_signal(condvar);
+}

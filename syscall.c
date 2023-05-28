@@ -109,6 +109,10 @@ extern int sys_print_proc_info(void);
 extern int sys_sem_init(void);
 extern int sys_sem_acquire(void);
 extern int sys_sem_release(void);
+extern int sys_producer(void);
+extern int sys_consumer(void);
+extern int sys_cv_wait(void);
+extern int sys_cv_signal(void);
 
 static int (*syscalls[])(void) = {
     [SYS_fork] sys_fork,
@@ -141,7 +145,12 @@ static int (*syscalls[])(void) = {
     [SYS_print_proc_info] sys_print_proc_info,
     [SYS_sem_init] sys_sem_init,
     [SYS_sem_acquire] sys_sem_acquire,
-    [SYS_sem_release] sys_sem_release};
+    [SYS_sem_release] sys_sem_release,
+    [SYS_producer] sys_producer,
+    [SYS_consumer] sys_consumer,
+    [SYS_cv_wait] sys_cv_wait,
+    [SYS_cv_signal] sys_cv_signal,
+};
 
 void syscall(void)
 {

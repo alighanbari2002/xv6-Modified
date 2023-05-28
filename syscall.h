@@ -30,3 +30,7 @@
 #define SYS_sem_init 29
 #define SYS_sem_acquire 30
 #define SYS_sem_release 31
+#define SYS_producer 32
+#define SYS_consumer 33
+#define SYS_cv_wait 34
+#define SYS_cv_signal 35
