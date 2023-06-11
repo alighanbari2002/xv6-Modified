@@ -86,6 +86,8 @@ trap(struct trapframe *tf)
              newGuardAdr,
              curproc->guardAddr);
     clearpteu(curproc->pgdir, newGuardAdr);
+    // curproc->tf->esp = 
+    curproc->guardAddr = newGuardAdr;
     // cprintf("new guard page allocated");
     break;
   //PAGEBREAK: 13
