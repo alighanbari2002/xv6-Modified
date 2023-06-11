@@ -78,6 +78,16 @@ trap(struct trapframe *tf)
     lapiceoi();
     break;
 
+  case T_PGFLT:
+    struct proc* curproc = myproc();
+    risepteu(curproc->pgdir, curproc->guardAddr);
+    uint newGuardAdr = curproc->guardAddr - PGSIZE;
+    allocuvm(curproc->pgdir,
+             newGuardAdr,
+             curproc->guardAddr);
+    clearpteu(curproc->pgdir, newGuardAdr);
+    // cprintf("new guard page allocated");
+    break;
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){
@@ -109,4 +119,10 @@ trap(struct trapframe *tf)
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();
+}
+
+void 
+userPageFaultHandler(struct proc* p)
+{
+
 }
