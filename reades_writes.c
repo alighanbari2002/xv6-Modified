@@ -5,77 +5,85 @@
 
 #define READERS_SEM 0
 #define WRITERS_SEM 1
+
 #define MAX_BUF 100
 #define TEST_FILE "some_read.txt"
 #define PRINT_STR "warm Welcome From me!\n"
 
 int main()
 {
-    // sem_init(READERS_SEM, 3); 
-    // sem_init(WRITERS_SEM, 2);
+    sem_init(READERS_SEM, 1); 
+    sem_init(WRITERS_SEM, 1);
     
     unlink(TEST_FILE);
-    int fd = open(TEST_FILE, O_RDWR | O_CREATE);
-    if(fd < 0)
-    {
-        printf(1, "not open\n");
-    }
-    write(fd, PRINT_STR, 24);
-    close(fd);
-    int rfd = open(TEST_FILE, O_RDWR);
-    char buf[MAX_BUF];
-    memset(buf, 0, MAX_BUF);
-    read(fd, buf, MAX_BUF);
-    printf(1, "file: %s", buf);
-
-    // for(int i = 0; i < 5; i++)
+    int fd = open(TEST_FILE, O_RDWR | O_CREATE); // making sure file exisits before read and writes
+    // unlink(TEST_FILE);
+    // int fd = open(TEST_FILE, O_RDWR | O_CREATE);
+    // if(fd < 0)
     // {
-    //     int pid = fork();
-    //     if(pid < 0)
-    //     {
-    //         printf(1, "error on creating child!\n");
-    //     }
-    //     if(pid > 0)
-    //     {
-    //         // printf(1, "pid is: %d\n", pid);
-    //         continue;
-    //     }
-    //     else // pid == 0
-    //     {
-    //         if(i == 1 || i == 2 || i == 4) // readers
-    //         {
-    //             sem_acquire(READERS_SEM);
-    //             char buf[MAX_BUF];
-    //             memset(buf, 0, MAX_BUF);
-    //             read(fd, buf, MAX_BUF);
-    //             printf(1, "file: %s", buf);
-    //             sem_release(READERS_SEM);
-    //             exit();
-    //         }
-    //         else if(i == 0 || i == 3) // 0 & 4 writers
-    //         {
-    //             // sem_acquire(READERS_SEM);
-    //             // sem_acquire(READERS_SEM);
-    //             // sem_acquire(READERS_SEM);
-
-    //             // sem_acquire(WRITERS_SEM);
-    
-                
-    //             // sem_release(WRITERS_SEM);
-                
-    //             // sem_release(READERS_SEM);
-    //             // sem_release(READERS_SEM);
-    //             // sem_release(READERS_SEM);
-
-    //             exit();
-    //         }
-    //     }
+    //     printf(1, "not open\n");
     // }
+    // write(fd, PRINT_STR, 24);
     // close(fd);
-    // for(int i = 0; i < 5; i++)
-    // {
-    //     wait();
-    // }
-    close(fd);
+    // int rfd = open(TEST_FILE, O_RDWR);
+    // char buf[MAX_BUF];
+    // memset(buf, 0, MAX_BUF);
+    // read(fd, buf, MAX_BUF);
+    // printf(1, "file: %s", buf);
+
+    for(int i = 0; i < 5; i++)
+    {
+        int pid = fork();
+        if(pid < 0)
+        {
+            printf(1, "error on creating child!\n");
+        }
+        if(pid > 0)
+        {
+            // printf(1, "pid is: %d\n", pid);
+            continue;
+        }
+        else // pid == 0
+        {
+            if(i == 1 || i == 2 || i == 4) // readers
+            {
+                sem_acquire(READERS_SEM);
+                // int fd = open(TEST_FILE, O_RDONLY);
+                char buf[MAX_BUF];
+                memset(buf, 0, MAX_BUF);
+                read(fd, buf, MAX_BUF);
+                printf(1, "file: %s", buf);
+                close(fd);
+                // unlink(TEST_FILE);
+                sem_release(READERS_SEM);
+                exit();
+            }
+            else if(i == 0 || i == 3) // 0 & 4 writers
+            {
+                sem_acquire(READERS_SEM);
+                // sem_acquire(READERS_SEM);
+                // sem_acquire(READERS_SEM);
+
+                sem_acquire(WRITERS_SEM);
+
+                // int fd = open(TEST_FILE, O_WRONLY);
+                printf(fd, "A warm welcome from writer: %d\n", i);
+                close(fd); 
+                // unlink(TEST_FILE);
+                sem_release(WRITERS_SEM);
+                
+                // sem_release(READERS_SEM);
+                // sem_release(READERS_SEM);
+                sem_release(READERS_SEM);
+
+                exit();
+            }
+        }
+    }
+
+    for(int i = 0; i < 5; i++)
+    {
+        wait();
+    }
     exit();
 }
