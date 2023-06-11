@@ -7,7 +7,7 @@
 #define WRITERS_SEM 1
 #define MAX_BUF 100
 #define TEST_FILE "some_read.txt"
-#define PRINT_STR "A warm Welcome From me!\n"
+#define PRINT_STR "warm Welcome From me!\n"
 
 int main()
 {
@@ -21,6 +21,8 @@ int main()
         printf(1, "not open\n");
     }
     write(fd, PRINT_STR, 24);
+    close(fd);
+    int rfd = open(TEST_FILE, O_RDWR);
     char buf[MAX_BUF];
     memset(buf, 0, MAX_BUF);
     read(fd, buf, MAX_BUF);
