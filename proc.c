@@ -73,6 +73,7 @@ myproc(void) {
 static struct proc*
 allocproc(void)
 {
+  // cprintf("allocproc called\n");
   struct proc *p;
   char *sp;
 
@@ -166,7 +167,7 @@ growproc(int n)
   if(n > 0){
     if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
       {
-        cprintf("somebad line 168:proc.c");
+        cprintf("somebad line %d proc.c", __LINE__);
         return -1;
       }
   } else if(n < 0){
@@ -184,6 +185,7 @@ growproc(int n)
 int
 fork(void)
 {
+  // cprintf("fork called\n");
   int i, pid;
   struct proc *np;
   struct proc *curproc = myproc();
@@ -539,4 +541,11 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+void
+print_stack_top(void)
+{
+  cprintf("stack top is currently at: %x\n", myproc()->tf->esp);
+  cprintf("stack guard is currently at: %x\n", myproc()->guardAddr);
 }

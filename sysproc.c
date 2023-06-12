@@ -89,3 +89,10 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int
+sys_print_stack_top(void)
+{
+  print_stack_top();
+  return 1;
+}

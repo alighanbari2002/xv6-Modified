@@ -74,6 +74,7 @@ stat(const char *n, struct stat *st)
   int r;
 
   fd = open(n, O_RDONLY);
+  printf(1, "stat: fd: %d\n", fd);
   if(fd < 0)
     return -1;
   r = fstat(fd, st);

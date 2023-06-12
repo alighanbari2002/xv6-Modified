@@ -221,6 +221,7 @@ loaduvm(pde_t *pgdir, char *addr, struct inode *ip, uint offset, uint sz)
 int
 allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
+  // cprintf("allocuvm called\n");
   char *mem;
   uint a;
 
@@ -323,12 +324,14 @@ clearpteu(pde_t *pgdir, char *uva)
 void
 risepteu(pde_t *pgdir, char* uva)
 {
+  // cprintf("risepteu was called\n");
   pte_t *pte;
 
   pte = walkpgdir(pgdir, uva, 0);
   if(pte == 0)
     panic("risepteu");
   *pte |= PTE_U;
+  *pte |= PTE_W;
 } 
 
 // Given a parent process's page table, create a copy
@@ -359,26 +362,26 @@ copyuvm(pde_t *pgdir, uint sz, uint stack_begin, uint stack_top)
     }
   }
 
-    pte_t *pte2;
-    uint pa2, i2, flags2;
-    char *mem2;
-    for(i2 = PGROUNDDOWN(stack_top); i2 < stack_begin; i2 += PGSIZE)
-    {
-      if((pte2 = walkpgdir(pgdir, (void *) i2, 0)) == 0)
-        panic("copyuvm: pte should exist");
-      if(!(*pte2 & PTE_P))
-        panic("copyuvm: page not present");
-      pa2 = PTE_ADDR(*pte2);
-      flags2 = PTE_FLAGS(*pte2);
-      if((mem2 = kalloc()) == 0)
-        goto bad;
-      memmove(mem2, (char*)P2V(pa2), PGSIZE);
-      if(mappages(d, (void*)i2, PGSIZE, V2P(mem2), flags2) < 0) {
-        kfree(mem2);
-        goto bad;
-      }
+  pte_t *pte2;
+  uint pa2, i2, flags2;
+  char *mem2;
+  for(i2 = PGROUNDDOWN(stack_top); i2 < stack_begin; i2 += PGSIZE)
+  {
+    if((pte2 = walkpgdir(pgdir, (void *) i2, 0)) == 0)
+      panic("copyuvm: pte should exist");
+    if(!(*pte2 & PTE_P))
+      panic("copyuvm: page not present");
+    pa2 = PTE_ADDR(*pte2);
+    flags2 = PTE_FLAGS(*pte2);
+    if((mem2 = kalloc()) == 0)
+      goto bad;
+    memmove(mem2, (char*)P2V(pa2), PGSIZE);
+    if(mappages(d, (void*)i2, PGSIZE, V2P(mem2), flags2) < 0) {
+      kfree(mem2);
+      goto bad;
     }
-    
+  }
+
   return d;
 
 bad:
