@@ -225,9 +225,19 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
   uint a;
 
   if(newsz > myproc()->guardAddr)
-    return 0;
+    {
+      if(myproc()->guardAddr == KERNBASE)
+      {
+        cprintf("alloc guard: %x\nnewsz: %x\n", myproc()->guardAddr, newsz);
+        return 0;
+      }
+    }
+
   if(newsz < oldsz)
-    return oldsz;
+    {
+      cprintf("alloc oldsz > newsz");
+      return oldsz;
+    }
 
   a = PGROUNDUP(oldsz);
   for(; a < newsz; a += PGSIZE){
@@ -367,6 +377,7 @@ copyuvm(pde_t *pgdir, uint sz, uint stack_begin, uint stack_top)
   return d;
 
 bad:
+  // cprintf("some bad happened");
   freevm(d);
   return 0;
 }

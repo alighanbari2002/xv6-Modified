@@ -36,8 +36,9 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
 struct proc {
-  uint sz;                     // Size of process memory (bytes)
+  uint sz;                     // Size of process memory (bytes) and also top of heap
   uint guardAddr;              // Begining of the stack's guard address
+  // uint stack_top;              // Will be the top of stack starting from STACK_BEGIN coming down to stack_top
   pde_t* pgdir;                // Page table
   char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state

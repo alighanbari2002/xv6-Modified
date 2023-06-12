@@ -12,7 +12,7 @@ exec(char *path, char **argv)
 {
   char *s, *last;
   int i, off;
-  uint argc, sz, stack_top, sp, ustack[3+MAXARG+1];
+  uint argc, sz, guard_lowaddr, sp, ustack[3+MAXARG+1];
   struct elfhdr elf;
   struct inode *ip;
   struct proghdr ph;
@@ -50,7 +50,10 @@ exec(char *path, char **argv)
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
     if((sz = allocuvm(pgdir, sz, ph.vaddr + ph.memsz)) == 0)
-      goto bad;
+      {
+        cprintf("somebad line 54:exec.c");
+        goto bad;
+      }
     if(ph.vaddr % PGSIZE != 0)
       goto bad;
     if(loaduvm(pgdir, (char*)ph.vaddr, ip, ph.off, ph.filesz) < 0)
@@ -62,11 +65,14 @@ exec(char *path, char **argv)
 
   // Allocate two pages at the next page boundary.
   // Make the first inaccessible.  Use the second as the user stack.
-  stack_top = STACK_BEGIN - 2*PGSIZE;
+  guard_lowaddr = STACK_BEGIN - 2*PGSIZE;
   
-  if((allocuvm(pgdir, STACK_BEGIN, STACK_BEGIN + 2*PGSIZE)) == 0)
-    goto bad;
-  clearpteu(pgdir, (char*)(stack_top));
+  if((allocuvm(pgdir, guard_lowaddr, guard_lowaddr + 2*PGSIZE)) == 0)
+    {
+      cprintf("somebad line 72:exec.c\n");
+      goto bad;
+    }
+  clearpteu(pgdir, (char*)(guard_lowaddr));
   sp = STACK_BEGIN;
 
   // Push argument strings, prepare rest of stack in ustack.

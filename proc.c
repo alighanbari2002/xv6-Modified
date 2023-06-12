@@ -111,6 +111,7 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+  p->guardAddr = KERNBASE;
 
   return p;
 }
@@ -164,7 +165,10 @@ growproc(int n)
   sz = curproc->sz;
   if(n > 0){
     if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
-      return -1;
+      {
+        cprintf("somebad line 168:proc.c");
+        return -1;
+      }
   } else if(n < 0){
     if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
       return -1;
@@ -202,6 +206,7 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  np->guardAddr = curproc->guardAddr; // inherit guard address from parent
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
