@@ -327,7 +327,7 @@ risepteu(pde_t *pgdir, char* uva)
 
   pte = walkpgdir(pgdir, uva, 0);
   if(pte == 0)
-    panic("clearpteu");
+    panic("risepteu");
   *pte |= PTE_U;
 } 
 
@@ -357,27 +357,32 @@ copyuvm(pde_t *pgdir, uint sz, uint stack_begin, uint stack_top)
       kfree(mem);
       goto bad;
     }
-    for(i = stack_top; i < stack_begin; i += PGSIZE)
+  }
+
+    pte_t *pte2;
+    uint pa2, i2, flags2;
+    char *mem2;
+    for(i2 = PGROUNDDOWN(stack_top); i2 < stack_begin; i2 += PGSIZE)
     {
-      if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
+      if((pte2 = walkpgdir(pgdir, (void *) i2, 0)) == 0)
         panic("copyuvm: pte should exist");
-      if(!(*pte & PTE_P))
+      if(!(*pte2 & PTE_P))
         panic("copyuvm: page not present");
-      pa = PTE_ADDR(*pte);
-      flags = PTE_FLAGS(*pte);
-      if((mem = kalloc()) == 0)
+      pa2 = PTE_ADDR(*pte2);
+      flags2 = PTE_FLAGS(*pte2);
+      if((mem2 = kalloc()) == 0)
         goto bad;
-      memmove(mem, (char*)P2V(pa), PGSIZE);
-      if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
-        kfree(mem);
+      memmove(mem2, (char*)P2V(pa2), PGSIZE);
+      if(mappages(d, (void*)i2, PGSIZE, V2P(mem2), flags2) < 0) {
+        kfree(mem2);
         goto bad;
       }
     }
-  }
+    
   return d;
 
 bad:
-  // cprintf("some bad happened");
+  cprintf("some bad happened vm.c copyuvm");
   freevm(d);
   return 0;
 }
