@@ -19,8 +19,7 @@ static void consputc(int);
 
 static int panicked = 0;
 
-static struct
-{
+static struct {
   struct spinlock lock;
   int locking;
 } cons;
@@ -33,52 +32,49 @@ printint(int xx, int base, int sign)
   int i;
   uint x;
 
-  if (sign && (sign = xx < 0))
+  if(sign && (sign = xx < 0))
     x = -xx;
   else
     x = xx;
 
   i = 0;
-  do
-  {
+  do{
     buf[i++] = digits[x % base];
-  } while ((x /= base) != 0);
+  }while((x /= base) != 0);
 
-  if (sign)
+  if(sign)
     buf[i++] = '-';
 
-  while (--i >= 0)
+  while(--i >= 0)
     consputc(buf[i]);
 }
-// PAGEBREAK: 50
+//PAGEBREAK: 50
 
 // Print to the console. only understands %d, %x, %p, %s.
-void cprintf(char *fmt, ...)
+void
+cprintf(char *fmt, ...)
 {
   int i, c, locking;
   uint *argp;
   char *s;
 
   locking = cons.locking;
-  if (locking)
+  if(locking)
     acquire(&cons.lock);
 
   if (fmt == 0)
     panic("null fmt");
 
-  argp = (uint *)(void *)(&fmt + 1);
-  for (i = 0; (c = fmt[i] & 0xff) != 0; i++)
-  {
-    if (c != '%')
-    {
+  argp = (uint*)(void*)(&fmt + 1);
+  for(i = 0; (c = fmt[i] & 0xff) != 0; i++){
+    if(c != '%'){
       consputc(c);
       continue;
     }
     c = fmt[++i] & 0xff;
-    if (c == 0)
+    if(c == 0)
       break;
-    switch (c)
-    {
+    switch(c){
     case 'd':
       printint(*argp++, 10, 1);
       break;
@@ -87,9 +83,9 @@ void cprintf(char *fmt, ...)
       printint(*argp++, 16, 0);
       break;
     case 's':
-      if ((s = (char *)*argp++) == 0)
+      if((s = (char*)*argp++) == 0)
         s = "(null)";
-      for (; *s; s++)
+      for(; *s; s++)
         consputc(*s);
       break;
     case '%':
@@ -103,11 +99,12 @@ void cprintf(char *fmt, ...)
     }
   }
 
-  if (locking)
+  if(locking)
     release(&cons.lock);
 }
 
-void panic(char *s)
+void
+panic(char *s)
 {
   int i;
   uint pcs[10];
@@ -119,284 +116,109 @@ void panic(char *s)
   cprintf(s);
   cprintf("\n");
   getcallerpcs(&s, pcs);
-  for (i = 0; i < 10; i++)
+  for(i=0; i<10; i++)
     cprintf(" %p", pcs[i]);
   panicked = 1; // freeze other CPU
-  for (;;)
+  for(;;)
     ;
 }
 
-// PAGEBREAK: 50
+//PAGEBREAK: 50
 #define BACKSPACE 0x100
 #define CRTPORT 0x3d4
-static ushort *crt = (ushort *)P2V(0xb8000); // CGA memory
-
-#define INPUT_BUF 128
-struct
-{
-  char buf[INPUT_BUF];
-  uint r;   // Read index
-  uint w;   // Write index
-  uint e;   // Edit index
-  uint len; // buffer length
-} input;
-
-static ushort shiftMode = 0;
-static uint modeTracker = 0;
-
-#define CURSOR_RIGHT_MODE 0
-#define CURSOR_LEFT_MODE 1
-
-int getPos()
-{
-  int cursorPos;
-  outb(CRTPORT, 14);
-  cursorPos = inb(CRTPORT + 1) << 8;
-  outb(CRTPORT, 15);
-  cursorPos |= inb(CRTPORT + 1);
-  return cursorPos;
-}
-
-void changePos(int cursorPos)
-{
-  outb(CRTPORT, 14);
-  outb(CRTPORT + 1, cursorPos >> 8);
-  outb(CRTPORT, 15);
-  outb(CRTPORT + 1, cursorPos);
-}
+static ushort *crt = (ushort*)P2V(0xb8000);  // CGA memory
 
 static void
 cgaputc(int c)
 {
-  int pos = getPos();
+  int pos;
 
-  if (c == '\n')
-    pos += 80 - pos % 80;
-  else if (c == BACKSPACE)
-  {
-    for (uint i = pos - 1; i < pos + input.len; i++)
-    {
-      crt[i] = crt[i + 1];
-    }
-    if (pos > 0)
-      --pos;
-  }
-  else
-  {
-    for (uint i = pos + input.len; i > pos; i--)
-    {
-      crt[i] = crt[i - 1];
-    }
-    crt[pos++] = (c & 0xff) | 0x0700; // black on white
-  }
-  if (pos < 0 || pos > 25 * 80)
+  // Cursor position: col + 80*row.
+  outb(CRTPORT, 14);
+  pos = inb(CRTPORT+1) << 8;
+  outb(CRTPORT, 15);
+  pos |= inb(CRTPORT+1);
+
+  if(c == '\n')
+    pos += 80 - pos%80;
+  else if(c == BACKSPACE){
+    if(pos > 0) --pos;
+  } else
+    crt[pos++] = (c&0xff) | 0x0700;  // black on white
+
+  if(pos < 0 || pos > 25*80)
     panic("pos under/overflow");
 
-  if ((pos / 80) >= 24)
-  { // Scroll up.
-    memmove(crt, crt + 80, sizeof(crt[0]) * 23 * 80);
+  if((pos/80) >= 24){  // Scroll up.
+    memmove(crt, crt+80, sizeof(crt[0])*23*80);
     pos -= 80;
-    memset(crt + pos, 0, sizeof(crt[0]) * (24 * 80 - pos));
+    memset(crt+pos, 0, sizeof(crt[0])*(24*80 - pos));
   }
 
-  changePos(pos);
+  outb(CRTPORT, 14);
+  outb(CRTPORT+1, pos>>8);
+  outb(CRTPORT, 15);
+  outb(CRTPORT+1, pos);
+  crt[pos] = ' ' | 0x0700;
 }
-// crt[pos] = ' ' | 0x0700;
 
-void consputc(int c)
+void
+consputc(int c)
 {
-  if (panicked)
-  {
+  if(panicked){
     cli();
-    for (;;)
+    for(;;)
       ;
   }
 
-  if (c == BACKSPACE)
-  {
-    uartputc('\b');
-    uartputc(' ');
-    uartputc('\b');
-  }
-  else
+  if(c == BACKSPACE){
+    uartputc('\b'); uartputc(' '); uartputc('\b');
+  } else
     uartputc(c);
   cgaputc(c);
 }
 
-void switchBegin()
-{
-  int pos = getPos();
-  if (crt[pos - 2] == ('$' | 0x0700))
-  { // if at the begining of line, do nothing.
-    return;
-  }
-  int change;
-  change = pos % 80 - 2;
-  input.e -= change;
-  changePos(pos - change);
-}
+#define INPUT_BUF 128
+struct {
+  char buf[INPUT_BUF];
+  uint r;  // Read index
+  uint w;  // Write index
+  uint e;  // Edit index
+} input;
 
-void switchEnd()
-{
-  int pos = getPos();
-  int change = pos % 80 - 2 - input.len;
-  changePos(pos - change);
-}
+#define C(x)  ((x)-'@')  // Control-x
 
-void shiftBufLeft(uint startIndex)
-{
-  for (uint i = startIndex; i < input.len; i++)
-  {
-    input.buf[(i - 1) % INPUT_BUF] = input.buf[i % INPUT_BUF];
-  }
-}
-
-void shiftBufRight()
-{
-  for (uint i = input.len; i > modeTracker; i--)
-  {
-    input.buf[i % INPUT_BUF] = input.buf[(i - 1) % INPUT_BUF];
-  }
-}
-
-void deleteWord()
-{
-  int pos = getPos();
-  if (crt[pos - 2] == ('$' | 0x0700))
-    return;
-
-  while (input.buf[(input.e - 1) % INPUT_BUF] == ' ')
-  {
-    if (shiftMode == CURSOR_LEFT_MODE)
-    {
-      shiftBufLeft(input.e);
-      modeTracker--;
-    }
-    input.e--;
-    input.len--;
-    consputc(BACKSPACE);
-  }
-  while (1)
-  {
-    int pos = getPos();
-    if (crt[pos - 2] == ('$' | 0x0700))
-      return;
-
-    if (input.buf[(input.e - 1) % INPUT_BUF] == ' ' ||
-        input.buf[(input.e - 1) % INPUT_BUF] == '\n' ||
-        input.e == input.w)
-    {
-      break;
-    }
-    if (shiftMode == CURSOR_LEFT_MODE)
-    {
-      shiftBufLeft(input.e);
-      modeTracker--;
-    }
-    input.e--;
-    input.len--;
-    consputc(BACKSPACE);
-  }
-}
-
-void setupShiftMode(ushort mode)
-{
-  if (mode == CURSOR_RIGHT_MODE)
-  {
-    switchEnd();
-    shiftMode = CURSOR_RIGHT_MODE;
-    input.e = input.len;
-  }
-  else if (mode == CURSOR_LEFT_MODE)
-  {
-    switchBegin();
-    shiftMode = CURSOR_LEFT_MODE;
-    input.e = input.w;
-    modeTracker = 0;
-  }
-}
-
-void kill_line()
-{
-  setupShiftMode(CURSOR_RIGHT_MODE);
-  while (1)
-  {
-    int pos = getPos();
-    if (crt[pos - 2] == ('$' | 0x0700))
-    {
-      return;
-    }
-    deleteWord();
-  }
-}
-
-void backSpace()
-{
-  int pos = getPos();
-  if (input.e != input.w && crt[pos - 2] != ('$' | 0x0700))
-  {
-    if (shiftMode == CURSOR_LEFT_MODE)
-    {
-      shiftBufLeft(modeTracker);
-      modeTracker--;
-    }
-    input.e--;
-    input.len--;
-    consputc(BACKSPACE);
-  }
-}
-
-#define C(x) ((x) - '@') // Control-x
-
-void consoleintr(int (*getc)(void))
+void
+consoleintr(int (*getc)(void))
 {
   int c, doprocdump = 0;
 
   acquire(&cons.lock);
-  while ((c = getc()) >= 0)
-  {
-    switch (c)
-    {
-    case C('P'): // Process listing.
+  while((c = getc()) >= 0){
+    switch(c){
+    case C('P'):  // Process listing.
       // procdump() locks cons.lock indirectly; invoke later
       doprocdump = 1;
       break;
-
-    case C('U'): // Kill line.
-      kill_line();
+    case C('U'):  // Kill line.
+      while(input.e != input.w &&
+            input.buf[(input.e-1) % INPUT_BUF] != '\n'){
+        input.e--;
+        consputc(BACKSPACE);
+      }
       break;
-
-    case C('H'):
-    case '\x7f': // Backspace
-      backSpace();
+    case C('H'): case '\x7f':  // Backspace
+      if(input.e != input.w){
+        input.e--;
+        consputc(BACKSPACE);
+      }
       break;
-
-    case C('W'): // ctrl + w
-      deleteWord();
-      break;
-
-    case '{': // shift + [
-      setupShiftMode(CURSOR_LEFT_MODE);
-      break;
-
-    case '}': // shift + ]
-      setupShiftMode(CURSOR_RIGHT_MODE);
-      break;
-
     default:
-      if (c != 0 && input.e - input.r < INPUT_BUF)
-      {
+      if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
-        input.len++;
-        if (shiftMode == CURSOR_LEFT_MODE)
-        {
-          shiftBufRight();
-          modeTracker++;
-        }
         input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
-        if (c == '\n' || c == C('D') || input.e == input.r + INPUT_BUF)
-        {
+        if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
           input.w = input.e;
           wakeup(&input.r);
         }
@@ -405,13 +227,13 @@ void consoleintr(int (*getc)(void))
     }
   }
   release(&cons.lock);
-  if (doprocdump)
-  {
-    procdump(); // now call procdump() wo. cons.lock held
+  if(doprocdump) {
+    procdump();  // now call procdump() wo. cons.lock held
   }
 }
 
-int consoleread(struct inode *ip, char *dst, int n)
+int
+consoleread(struct inode *ip, char *dst, int n)
 {
   uint target;
   int c;
@@ -419,12 +241,9 @@ int consoleread(struct inode *ip, char *dst, int n)
   iunlock(ip);
   target = n;
   acquire(&cons.lock);
-  while (n > 0)
-  {
-    while (input.r == input.w)
-    {
-      if (myproc()->killed)
-      {
+  while(n > 0){
+    while(input.r == input.w){
+      if(myproc()->killed){
         release(&cons.lock);
         ilock(ip);
         return -1;
@@ -432,10 +251,8 @@ int consoleread(struct inode *ip, char *dst, int n)
       sleep(&input.r, &cons.lock);
     }
     c = input.buf[input.r++ % INPUT_BUF];
-    if (c == C('D'))
-    { // EOF
-      if (n < target)
-      {
+    if(c == C('D')){  // EOF
+      if(n < target){
         // Save ^D for next time, to make sure
         // caller gets a 0-byte result.
         input.r--;
@@ -444,7 +261,7 @@ int consoleread(struct inode *ip, char *dst, int n)
     }
     *dst++ = c;
     --n;
-    if (c == '\n')
+    if(c == '\n')
       break;
   }
   release(&cons.lock);
@@ -453,13 +270,14 @@ int consoleread(struct inode *ip, char *dst, int n)
   return target - n;
 }
 
-int consolewrite(struct inode *ip, char *buf, int n)
+int
+consolewrite(struct inode *ip, char *buf, int n)
 {
   int i;
 
   iunlock(ip);
   acquire(&cons.lock);
-  for (i = 0; i < n; i++)
+  for(i = 0; i < n; i++)
     consputc(buf[i] & 0xff);
   release(&cons.lock);
   ilock(ip);
@@ -467,7 +285,8 @@ int consolewrite(struct inode *ip, char *buf, int n)
   return n;
 }
 
-void consoleinit(void)
+void
+consoleinit(void)
 {
   initlock(&cons.lock, "console");
 
@@ -477,3 +296,4 @@ void consoleinit(void)
 
   ioapicenable(IRQ_KBD, 0);
 }
+
