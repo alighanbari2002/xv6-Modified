@@ -6,11 +6,18 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "sleeplock.h"
 
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
+
+struct queue {
+  struct sleeplock lock;
+  struct proc* proc[NPROC];
+  int pi;
+};
 
 struct queue rrQueue;
 struct queue lotteryQueue;
@@ -29,21 +36,14 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
-  initlock(&rrQueue.lock, "rrQueue");
-  initlock(&lotteryQueue.lock, "lotteryQueue");
-  initlock(&FCFSQueue.lock, "FCFSQueue");
+  initsleeplock(&rrQueue.lock, "rrQueue");
+  initsleeplock(&lotteryQueue.lock, "lotteryQueue");
+  initsleeplock(&FCFSQueue.lock, "FCFSQueue");
   
-  acquire(&rrQueue.lock);
   rrQueue.pi = -1;
-  release(&rrQueue.lock);
-
-  acquire(&lotteryQueue.lock);
   lotteryQueue.pi = -1;
-  release(&lotteryQueue.lock);
-
-  acquire(&FCFSQueue.lock);
   FCFSQueue.pi = -1;
-  release(&FCFSQueue.lock);
+  
 }
 
 // Must be called with interrupts disabled
@@ -236,11 +236,13 @@ fork(void)
 
   np->state = RUNNABLE;
 
-  acquire(&lotteryQueue.lock);
-  np->qType = LOTTERY;
-  lotteryQueue.pi++;
-  lotteryQueue.proc[FCFSQueue.pi] = np;
-  release(&lotteryQueue.lock);
+  np->qType = DEF; // test
+
+  // acquiresleep(&rrQueue.lock);
+  // np->qType = DEF;
+  // // rrQueue.pi++;
+  // rrQueue.proc[rrQueue.pi] = np;
+  // releasesleep(&rrQueue.lock);
 
   release(&ptable.lock);
 
@@ -254,7 +256,8 @@ fork(void)
 // Lock of the q must have been acquired before usage.
 void shiftOutQueue(struct queue q, struct proc* p)
 {
-  if(!holding(&q.lock))
+  struct proc* temp;
+  if(!holdingsleep(&q.lock))
   {
     panic("scheduling queue lock not held");
   }
@@ -266,8 +269,8 @@ void shiftOutQueue(struct queue q, struct proc* p)
       goto foundqproc;
     }
   }
+
 foundqproc:
-  struct proc* temp;
   while(qi <= q.pi)
   {
     temp = q.proc[qi];
@@ -286,22 +289,24 @@ void cleanupCorresQueue(struct proc* p)
   switch(p->qType)
   {
     case RR:
-      acquire(&rrQueue.lock);
+      acquiresleep(&rrQueue.lock);
       shiftOutQueue(rrQueue, p);
       rrQueue.pi--;
-      release(&rrQueue.lock);
+      releasesleep(&rrQueue.lock);
       break;
     case LOTTERY:
-      acquire(&lotteryQueue.lock);
+      acquiresleep(&lotteryQueue.lock);
       shiftOutQueue(lotteryQueue, p);
       lotteryQueue.pi--;
-      release(&lotteryQueue.lock);
+      releasesleep(&lotteryQueue.lock);
       break;
     case FCFS:
-      acquire(&FCFSQueue.lock);
+      acquiresleep(&FCFSQueue.lock);
       shiftOutQueue(FCFSQueue, p);
       FCFSQueue.pi--;
-      release(&FCFSQueue.lock);
+      releasesleep(&FCFSQueue.lock);
+      break;
+    default:
       break;
   }
 }
@@ -411,43 +416,44 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
   for(;;){
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-
-    acquire(&rrQueue.lock);
-    acquire(&lotteryQueue.lock);
-    acquire(&FCFSQueue.lock);
+    
     if(rrQueue.pi >= 0)
     {
+      acquiresleep(&rrQueue.lock);
       p = rrQueue.proc[rrCounter % (rrQueue.pi+1)];
       if(p->state != RUNNABLE)
       {
         panic("must not be in queue");
       }
       rrCounter++; // protected by rrQueue lock  
+      releasesleep(&rrQueue.lock);
     }
     else if(lotteryQueue.pi >= 0)
     {
-
+      acquiresleep(&lotteryQueue.lock);
+      releasesleep(&lotteryQueue.lock);
     }
     else if(FCFSQueue.pi >= 0)
     {
-
+      acquiresleep(&FCFSQueue.lock);
+      releasesleep(&FCFSQueue.lock);
     }
     else // default scheduling policy if all the queues were empty (just in case!)
     {
-      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-       if(p->state != RUNNABLE)
-         continue;
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      {
+       if(p->state == RUNNABLE)
+       {
+          break;
+       }
+      }
     }
-    release(&rrQueue.lock);
-    release(&lotteryQueue.lock);
-    release(&FCFSQueue.lock);
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -461,11 +467,10 @@ scheduler(void)
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
+      release(&ptable.lock);
     }
-    release(&ptable.lock);
 
   }
-}
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores

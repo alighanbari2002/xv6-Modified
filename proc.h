@@ -34,13 +34,7 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-struct queue {
-  struct spinlock lock;
-  struct proc* proc[NPROC];
-  int pi;
-};
-
-enum schedQ { RR, LOTTERY, FCFS };
+enum schedQ { RR = 0, LOTTERY = 1, FCFS = 2, DEF };
 
 // Per-process state
 struct proc {

@@ -52,17 +52,11 @@ trap(struct trapframe *tf)
       // uint xticks;
       acquire(&tickslock);
       ticks++;
-      // xticks = ticks; // similar to sys_uptime
       myproc()->runningTicks++;
       wakeup(&ticks);
-      // if(myproc()->isRoundRobin && xticks - myproc()->startTicks > TIME_SLOT)
-      // {
-      //   cprintf(1, "process %d's time slot has been expired", myproc()->pid);
-      //   yield();
-      // }
       if(myproc()->qType == RR && myproc()->runningTicks > TIME_SLOT)
       {
-        cprintf(1, "process %d's time slot has been expired", myproc()->pid);
+        cprintf("process %d's time slot has been expired", myproc()->pid);
         release(&tickslock);
         yield();
       }
