@@ -121,7 +121,7 @@ trap(struct trapframe *tf)
     {
       acquire(&tickslock);
       if(myproc()->qType != RR || 
-        (myproc()->qType == RR && myproc()->runningTicks <= TIME_SLOT))
+        (myproc()->qType == RR && myproc()->runningTicks > TIME_SLOT))
       {
         yield();
       }

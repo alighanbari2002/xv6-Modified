@@ -89,3 +89,10 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+void
+sys_print_proc(void)
+{
+  // since ptable is only accessible in proc.c we need yet another wrapper
+  print_proc_specs();
+}

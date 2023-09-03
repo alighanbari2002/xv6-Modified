@@ -17,6 +17,7 @@ struct queue lotteryQueue;
 struct queue FCFSQueue;
 
 static struct proc *initproc;
+static uint rrCounter = 0;
 
 int nextpid = 1;
 extern void forkret(void);
@@ -423,7 +424,12 @@ scheduler(void)
     acquire(&FCFSQueue.lock);
     if(rrQueue.pi >= 0)
     {
-
+      p = rrQueue.proc[rrCounter % (rrQueue.pi+1)];
+      if(p->state != RUNNABLE)
+      {
+        panic("must not be in queue");
+      }
+      rrCounter++; // protected by rrQueue lock  
     }
     else if(lotteryQueue.pi >= 0)
     {
@@ -637,4 +643,28 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+
+void print_proc_specs(void)
+{
+  struct proc* p;
+  char *states[] = {
+  [UNUSED]    "UNUSED  ",
+  [EMBRYO]    "EMBRYO  ",
+  [SLEEPING]  "SLEEP   ",
+  [RUNNABLE]  "RUNNABLE",
+  [RUNNING]   "RUN     ",
+  [ZOMBIE]    "ZOMBIE  "
+  };
+  cprintf("name           pid         state        queue    arrive time        ticket      cycle\n");
+  cprintf("......................................................................................\n");
+  cprintf("%s             %d          %s      %d        %d                 %d          %d\n");
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p->state != UNUSED && p < &ptable.proc[NPROC]; p++)
+  {
+     cprintf("%s             %d          %s           %d       %d                 %d          %d\n",
+            p->name, p->pid, states[p->state], p->qType, p->last_running, p->ticket, p->runningTicks);
+  }
+  release(&ptable.lock);
 }
