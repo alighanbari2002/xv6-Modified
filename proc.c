@@ -12,6 +12,10 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
+struct queue rrQueue;
+struct queue lotteryQueue;
+struct queue FCFSQueue;
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -24,6 +28,21 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  initlock(&rrQueue.lock, "rrQueue");
+  initlock(&lotteryQueue.lock, "lotteryQueue");
+  initlock(&FCFSQueue.lock, "FCFSQueue");
+  
+  acquire(&rrQueue.lock);
+  rrQueue.pi = -1;
+  release(&rrQueue.lock);
+
+  acquire(&lotteryQueue.lock);
+  lotteryQueue.pi = -1;
+  release(&lotteryQueue.lock);
+
+  acquire(&FCFSQueue.lock);
+  FCFSQueue.pi = -1;
+  release(&FCFSQueue.lock);
 }
 
 // Must be called with interrupts disabled
@@ -216,6 +235,12 @@ fork(void)
 
   np->state = RUNNABLE;
 
+  acquire(&lotteryQueue.lock);
+  np->qType = LOTTERY;
+  lotteryQueue.pi++;
+  lotteryQueue.proc[FCFSQueue.pi] = np;
+  release(&lotteryQueue.lock);
+
   release(&ptable.lock);
 
   return pid;
@@ -263,6 +288,9 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
+
+  // remove from queue
+  
   sched();
   panic("zombie exit");
 }
@@ -332,10 +360,31 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
 
+    acquire(&rrQueue.lock);
+    acquire(&lotteryQueue.lock);
+    acquire(&FCFSQueue.lock);
+    if(rrQueue.pi >= 0)
+    {
+
+    }
+    else if(lotteryQueue.pi >= 0)
+    {
+
+    }
+    else if(FCFSQueue.pi >= 0)
+    {
+
+    }
+    else // default scheduling policy if all the queues were empty (just in case!)
+    {
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+       if(p->state != RUNNABLE)
+         continue;
+    }
+    release(&rrQueue.lock);
+    release(&lotteryQueue.lock);
+    release(&FCFSQueue.lock);
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.

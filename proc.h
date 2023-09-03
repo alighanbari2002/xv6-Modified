@@ -34,6 +34,14 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct queue {
+  struct spinlock lock;
+  struct proc* proc[NPROC];
+  int pi;
+};
+
+enum schedQ { RR, LOTTERY, FCFS };
+
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -49,6 +57,8 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  uint runningTicks;
+  enum schedQ qType;
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -56,3 +66,5 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+
+#define TIME_SLOT 30
