@@ -249,6 +249,62 @@ fork(void)
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
+
+// Lock of the q must have been acquired before usage.
+void shiftOutQueue(struct queue q, struct proc* p)
+{
+  if(!holding(&q.lock))
+  {
+    panic("scheduling queue lock not held");
+  }
+  int qi = 0;
+  for(; qi < q.pi; qi++)
+  {
+    if(q.proc[qi]->pid == p->pid)
+    {
+      goto foundqproc;
+    }
+  }
+foundqproc:
+  struct proc* temp;
+  while(qi <= q.pi)
+  {
+    temp = q.proc[qi];
+    q.proc[qi] = q.proc[qi+1];
+    q.proc[qi+1] = temp;
+    qi++;
+  }
+  // Turn the outfit process to NULL
+  q.proc[qi] = (void*)(0);
+
+}
+
+
+void cleanupCorresQueue(struct proc* p)
+{
+  switch(p->qType)
+  {
+    case RR:
+      acquire(&rrQueue.lock);
+      shiftOutQueue(rrQueue, p);
+      rrQueue.pi--;
+      release(&rrQueue.lock);
+      break;
+    case LOTTERY:
+      acquire(&lotteryQueue.lock);
+      shiftOutQueue(lotteryQueue, p);
+      lotteryQueue.pi--;
+      release(&lotteryQueue.lock);
+      break;
+    case FCFS:
+      acquire(&FCFSQueue.lock);
+      shiftOutQueue(FCFSQueue, p);
+      FCFSQueue.pi--;
+      release(&FCFSQueue.lock);
+      break;
+  }
+}
+
 void
 exit(void)
 {
@@ -290,7 +346,8 @@ exit(void)
   curproc->state = ZOMBIE;
 
   // remove from queue
-  
+  cleanupCorresQueue(curproc);
+
   sched();
   panic("zombie exit");
 }
