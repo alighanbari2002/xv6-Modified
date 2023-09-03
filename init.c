@@ -21,6 +21,16 @@ main(void)
 
   for(;;){
     printf(1, "init: starting sh\n");
+    
+    printf(1, "\n");
+    printf(1, " /-----------------------------\\\n");
+    printf(1, " | Group Members:              |\n");
+    printf(1, " |  - Ali Ghanbari %% 810199473 |\n");
+    printf(1, " |  - Behrad Elmi  %% 810199557 |\n");
+    printf(1, " |  - Bita Nasiri  %% 810199504 |\n");
+    printf(1, " \\-----------------------------/\n");
+    printf(1, "\n");
+    
     pid = fork();
     if(pid < 0){
       printf(1, "init: fork failed\n");
