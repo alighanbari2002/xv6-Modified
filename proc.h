@@ -67,3 +67,5 @@ struct proc {
 #define TIME_SLOT 30
 
 void print_proc_specs(void);
+
+void run_time_update(void);

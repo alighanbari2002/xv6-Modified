@@ -6,25 +6,13 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-#include "sleeplock.h"
 
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
 
-struct queue {
-  struct sleeplock lock;
-  struct proc* proc[NPROC];
-  int pi;
-};
-
-struct queue rrQueue;
-struct queue lotteryQueue;
-struct queue FCFSQueue;
-
 static struct proc *initproc;
-static uint rrCounter = 0;
 
 int nextpid = 1;
 extern void forkret(void);
@@ -36,14 +24,6 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
-  initsleeplock(&rrQueue.lock, "rrQueue");
-  initsleeplock(&lotteryQueue.lock, "lotteryQueue");
-  initsleeplock(&FCFSQueue.lock, "FCFSQueue");
-  
-  rrQueue.pi = -1;
-  lotteryQueue.pi = -1;
-  FCFSQueue.pi = -1;
-  
 }
 
 // Must be called with interrupts disabled
@@ -236,14 +216,6 @@ fork(void)
 
   np->state = RUNNABLE;
 
-  np->qType = DEF; // test
-
-  // acquiresleep(&rrQueue.lock);
-  // np->qType = DEF;
-  // // rrQueue.pi++;
-  // rrQueue.proc[rrQueue.pi] = np;
-  // releasesleep(&rrQueue.lock);
-
   release(&ptable.lock);
 
   return pid;
@@ -252,65 +224,6 @@ fork(void)
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
-
-// Lock of the q must have been acquired before usage.
-void shiftOutQueue(struct queue q, struct proc* p)
-{
-  struct proc* temp;
-  if(!holdingsleep(&q.lock))
-  {
-    panic("scheduling queue lock not held");
-  }
-  int qi = 0;
-  for(; qi < q.pi; qi++)
-  {
-    if(q.proc[qi]->pid == p->pid)
-    {
-      goto foundqproc;
-    }
-  }
-
-foundqproc:
-  while(qi <= q.pi)
-  {
-    temp = q.proc[qi];
-    q.proc[qi] = q.proc[qi+1];
-    q.proc[qi+1] = temp;
-    qi++;
-  }
-  // Turn the outfit process to NULL
-  q.proc[qi] = (void*)(0);
-
-}
-
-
-void cleanupCorresQueue(struct proc* p)
-{
-  switch(p->qType)
-  {
-    case RR:
-      acquiresleep(&rrQueue.lock);
-      shiftOutQueue(rrQueue, p);
-      rrQueue.pi--;
-      releasesleep(&rrQueue.lock);
-      break;
-    case LOTTERY:
-      acquiresleep(&lotteryQueue.lock);
-      shiftOutQueue(lotteryQueue, p);
-      lotteryQueue.pi--;
-      releasesleep(&lotteryQueue.lock);
-      break;
-    case FCFS:
-      acquiresleep(&FCFSQueue.lock);
-      shiftOutQueue(FCFSQueue, p);
-      FCFSQueue.pi--;
-      releasesleep(&FCFSQueue.lock);
-      break;
-    default:
-      break;
-  }
-}
-
 void
 exit(void)
 {
@@ -350,10 +263,6 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
-
-  // remove from queue
-  cleanupCorresQueue(curproc);
-
   sched();
   panic("zombie exit");
 }
@@ -416,44 +325,17 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+  
   for(;;){
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    
-    if(rrQueue.pi >= 0)
-    {
-      acquiresleep(&rrQueue.lock);
-      p = rrQueue.proc[rrCounter % (rrQueue.pi+1)];
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
-      {
-        panic("must not be in queue");
-      }
-      rrCounter++; // protected by rrQueue lock  
-      releasesleep(&rrQueue.lock);
-    }
-    else if(lotteryQueue.pi >= 0)
-    {
-      acquiresleep(&lotteryQueue.lock);
-      releasesleep(&lotteryQueue.lock);
-    }
-    else if(FCFSQueue.pi >= 0)
-    {
-      acquiresleep(&FCFSQueue.lock);
-      releasesleep(&FCFSQueue.lock);
-    }
-    else // default scheduling policy if all the queues were empty (just in case!)
-    {
-      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-      {
-       if(p->state == RUNNABLE)
-       {
-          break;
-       }
-      }
-    }
+        continue;
+
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -467,10 +349,11 @@ scheduler(void)
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
-      release(&ptable.lock);
     }
+    release(&ptable.lock);
 
   }
+}
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
@@ -650,7 +533,6 @@ procdump(void)
   }
 }
 
-
 void print_proc_specs(void)
 {
   struct proc* p;
@@ -662,8 +544,8 @@ void print_proc_specs(void)
   [RUNNING]   "RUN     ",
   [ZOMBIE]    "ZOMBIE  "
   };
-  cprintf("name           pid         state        queue    arrive time        ticket      cycle\n");
-  cprintf("......................................................................................\n");
+  cprintf("name    pid      state    queue   arrive time     ticket      cycle\n");
+  cprintf("....................................................................\n");
   cprintf("%s             %d          %s      %d        %d                 %d          %d\n");
   acquire(&ptable.lock);
   for(p = ptable.proc; p->state != UNUSED && p < &ptable.proc[NPROC]; p++)
@@ -672,4 +554,16 @@ void print_proc_specs(void)
             p->name, p->pid, states[p->state], p->qType, p->last_running, p->ticket, p->runningTicks);
   }
   release(&ptable.lock);
+}
+
+void run_time_update(void)
+{
+  acquire(&tickslock);
+  myproc()->runningTicks++;
+  // if(myproc()->qType == RR && myproc()->runningTicks > TIME_SLOT)
+  // {
+  //   cprintf("process %d's time slot has been expired", myproc()->pid);
+  //   yield();
+  // }
+  release(&tickslock);
 }

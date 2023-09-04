@@ -52,15 +52,9 @@ trap(struct trapframe *tf)
       // uint xticks;
       acquire(&tickslock);
       ticks++;
-      myproc()->runningTicks++;
       wakeup(&ticks);
-      if(myproc()->qType == RR && myproc()->runningTicks > TIME_SLOT)
-      {
-        cprintf("process %d's time slot has been expired", myproc()->pid);
-        release(&tickslock);
-        yield();
-      }
       release(&tickslock); // release must be after round robin check to ensure proper functionality
+      run_time_update();
     }
     lapiceoi();
     break;
@@ -112,15 +106,7 @@ trap(struct trapframe *tf)
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER)
-    {
-      acquire(&tickslock);
-      if(myproc()->qType != RR || 
-        (myproc()->qType == RR && myproc()->runningTicks > TIME_SLOT))
-      {
-        yield();
-      }
-      // else let the process have its time quantom
-    }
+    yield();
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)

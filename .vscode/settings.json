@@ -2,6 +2,7 @@
     "files.associations": {
         "defs.h": "c",
         "types.h": "c",
-        "user.h": "c"
+        "user.h": "c",
+        "sleeplock.h": "c"
     }
 }
