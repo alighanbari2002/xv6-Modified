@@ -558,12 +558,19 @@ void print_proc_specs(void)
 
 void run_time_update(void)
 {
-  acquire(&tickslock);
-  myproc()->runningTicks++;
-  // if(myproc()->qType == RR && myproc()->runningTicks > TIME_SLOT)
-  // {
-  //   cprintf("process %d's time slot has been expired", myproc()->pid);
-  //   yield();
-  // }
-  release(&tickslock);
+  struct proc* p;
+  // Looks like can't use myproc() and there is no other way
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) 
+  {
+    if(p->state == RUNNING)
+    {
+      break;
+    }
+  }
+  p->runningTicks++;
+  if(p->qType == RR && p->runningTicks > TIME_SLOT)
+  {
+    cprintf("process %d's time slot has been expired", p->pid);
+    yield();
+  }
 }

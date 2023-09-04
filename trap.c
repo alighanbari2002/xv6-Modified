@@ -52,9 +52,9 @@ trap(struct trapframe *tf)
       // uint xticks;
       acquire(&tickslock);
       ticks++;
+      run_time_update();
       wakeup(&ticks);
       release(&tickslock); // release must be after round robin check to ensure proper functionality
-      run_time_update();
     }
     lapiceoi();
     break;
