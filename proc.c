@@ -6,7 +6,6 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-#include "sleeplock.h"
 
 struct {
   struct spinlock lock;
@@ -14,7 +13,6 @@ struct {
 } ptable;
 
 struct queue {
-  struct sleeplock lock;
   struct proc* proc[NPROC];
   int pi;
 };
@@ -36,9 +34,6 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
-  initsleeplock(&rrQueue.lock, "rrQueue");
-  initsleeplock(&lotteryQueue.lock, "lotteryQueue");
-  initsleeplock(&FCFSQueue.lock, "FCFSQueue");
   
   rrQueue.pi = -1;
   lotteryQueue.pi = -1;
@@ -106,6 +101,10 @@ allocproc(void)
   return 0;
 
 found:
+
+  // Default scheduling queue
+  p->qType = DEF;
+
   p->state = EMBRYO;
   p->pid = nextpid++;
 
@@ -131,9 +130,6 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
-  
-  // Default scheduling queue
-  p->qType = DEF;
 
   return p;
 }
@@ -147,6 +143,10 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
+  if(p == 0)
+  {
+    panic("userinit allocproc failed\n");
+  }
   
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
@@ -259,7 +259,7 @@ fork(void)
 void shiftOutQueue(struct queue q, struct proc* p)
 {
   struct proc* temp;
-  if(!holdingsleep(&q.lock))
+  if(!holding(&ptable.lock))
   {
     panic("scheduling queue lock not held");
   }
@@ -291,22 +291,16 @@ void cleanupCorresQueue(struct proc* p)
   switch(p->qType)
   {
     case RR:
-      acquiresleep(&rrQueue.lock);
       shiftOutQueue(rrQueue, p);
       rrQueue.pi--;
-      releasesleep(&rrQueue.lock);
       break;
     case LOTTERY:
-      acquiresleep(&lotteryQueue.lock);
       shiftOutQueue(lotteryQueue, p);
       lotteryQueue.pi--;
-      releasesleep(&lotteryQueue.lock);
       break;
     case FCFS:
-      acquiresleep(&FCFSQueue.lock);
       shiftOutQueue(FCFSQueue, p);
       FCFSQueue.pi--;
-      releasesleep(&FCFSQueue.lock);
       break;
     default:
       break;
@@ -425,26 +419,64 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(rrQueue.pi >= 0)
+    {
+      p = rrQueue.proc[rrCounter % (rrQueue.pi+1)];
       if(p->state != RUNNABLE)
-        continue;
+      {
+        panic("must not be in queue");
+      }
+      rrCounter++;
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-
       swtch(&(c->scheduler), p->context);
       switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
       c->proc = 0;
     }
-    release(&ptable.lock);
+    else if(lotteryQueue.pi >= 0)
+    {
 
+    }
+    else if(FCFSQueue.pi >= 0)
+    {
+      p = FCFSQueue.proc[0];
+      if(p->state != RUNNABLE)
+      {
+        panic("must not be in queue");
+      }
+
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+      c->proc = 0;
+    }
+    else
+    {
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      {
+        if(p->state != RUNNABLE)
+          continue;
+
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to us.
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
+    }
+    release(&ptable.lock);
   }
 }
 
