@@ -49,12 +49,10 @@ trap(struct trapframe *tf)
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
     if(cpuid() == 0){
-      // uint xticks;
       acquire(&tickslock);
       ticks++;
-      run_time_update();
       wakeup(&ticks);
-      release(&tickslock); // release must be after round robin check to ensure proper functionality
+      release(&tickslock);
     }
     lapiceoi();
     break;
@@ -106,7 +104,18 @@ trap(struct trapframe *tf)
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER)
-    yield();
+    {
+      myproc()->runningTicks++;
+      if(myproc()->qType == RR && myproc()->runningTicks >= TIME_SLOT)
+      {
+        yield();
+      }
+      else if(myproc()->qType == DEF)
+      {
+        yield();
+      }
+      // else let the process to be done or finish its time slot --> do not yield!
+    }
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)

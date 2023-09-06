@@ -34,7 +34,7 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
-enum schedQ { RR = 0, LOTTERY = 1, FCFS = 2, DEF };
+enum schedQ { RR = 1, LOTTERY = 2, FCFS = 3, DEF = 0 };
 
 // Per-process state
 struct proc {
@@ -67,5 +67,3 @@ struct proc {
 #define TIME_SLOT 30
 
 void print_proc_specs(void);
-
-void run_time_update(void);
