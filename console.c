@@ -128,24 +128,54 @@ panic(char *s)
 #define CRTPORT 0x3d4
 static ushort *crt = (ushort*)P2V(0xb8000);  // CGA memory
 
+#define INPUT_BUF 128
+struct {
+  char buf[INPUT_BUF];
+  uint r;   // Read index
+  uint w;   // Write index
+  uint e;   // Edit index
+  uint len; // Buffer length
+} input;
+
+static int
+get_cursor_position()
+{
+  // Cursor position: col + 80*row. 
+  outb(CRTPORT, 14);
+  int pos = inb(CRTPORT + 1) << 8;
+  outb(CRTPORT, 15);
+  pos |= inb(CRTPORT + 1);
+  return pos;
+}
+
+static void
+change_cursor_position(int pos)
+{
+  outb(CRTPORT, 14);
+  outb(CRTPORT + 1, pos >> 8);
+  outb(CRTPORT, 15);
+  outb(CRTPORT + 1, pos);
+}
+
 static void
 cgaputc(int c)
 {
-  int pos;
-
-  // Cursor position: col + 80*row.
-  outb(CRTPORT, 14);
-  pos = inb(CRTPORT+1) << 8;
-  outb(CRTPORT, 15);
-  pos |= inb(CRTPORT+1);
+  int pos = get_cursor_position();
 
   if(c == '\n')
     pos += 80 - pos%80;
   else if(c == BACKSPACE){
+    for(uint i = pos - 1; i < pos + input.len; i++){
+      crt[i] = crt[i + 1];
+    }
     if(pos > 0) --pos;
-  } else
+  }
+  else {
+    for(uint i = pos + input.len; i > pos; i--){
+      crt[i] = crt[i - 1];
+    }
     crt[pos++] = (c&0xff) | 0x0700;  // black on white
-
+  }
   if(pos < 0 || pos > 25*80)
     panic("pos under/overflow");
 
@@ -155,11 +185,8 @@ cgaputc(int c)
     memset(crt+pos, 0, sizeof(crt[0])*(24*80 - pos));
   }
 
-  outb(CRTPORT, 14);
-  outb(CRTPORT+1, pos>>8);
-  outb(CRTPORT, 15);
-  outb(CRTPORT+1, pos);
-  crt[pos] = ' ' | 0x0700;
+  change_cursor_position(pos);
+  // crt[pos] = ' ' | 0x0700;
 }
 
 void
@@ -178,15 +205,110 @@ consputc(int c)
   cgaputc(c);
 }
 
-#define INPUT_BUF 128
-struct {
-  char buf[INPUT_BUF];
-  uint r;  // Read index
-  uint w;  // Write index
-  uint e;  // Edit index
-} input;
+#define CURSOR_RIGHT_MODE 0
+#define CURSOR_LEFT_MODE  1
+static ushort cursor_mode = CURSOR_RIGHT_MODE;
 
-#define C(x)  ((x)-'@')  // Control-x
+static void
+switch_begin()
+{
+  int pos = get_cursor_position();
+  if(crt[pos - 2] == ('$' | 0x0700)) // is cursor at first of line?
+    return;
+  int change = pos % 80 - 2;
+  input.e -= change;
+  change_cursor_position(pos - change);
+}
+
+static void
+switch_end()
+{
+  int pos = get_cursor_position();
+  int change = pos % 80 - 2 - input.len;
+  change_cursor_position(pos - change);
+}
+
+static void
+set_cursor(ushort mode)
+{
+  if(mode == CURSOR_RIGHT_MODE){
+    switch_end();
+    cursor_mode = CURSOR_RIGHT_MODE;
+    input.e = input.len;
+  }
+  else if(mode == CURSOR_LEFT_MODE){
+    switch_begin();
+    cursor_mode = CURSOR_LEFT_MODE;
+    input.e = input.w;
+  }
+}
+
+static void
+shift_right_buffer()
+{
+  for(uint i = input.len; i > input.e; i--)
+    input.buf[i % INPUT_BUF] = input.buf[(i - 1) % INPUT_BUF];
+}
+
+static void
+shift_left_buffer(uint start_index)
+{
+  for(uint i = start_index; i < input.len; i++)
+    input.buf[(i - 1) % INPUT_BUF] = input.buf[i % INPUT_BUF];
+}
+
+static void
+backspace()
+{
+  int pos = get_cursor_position();
+  if(crt[pos - 2] != ('$' | 0x0700) && 
+     input.buf[(input.e - 1) % INPUT_BUF] != '\n'){
+    if(cursor_mode == CURSOR_LEFT_MODE)
+      shift_left_buffer(input.e);
+    input.e--;
+    input.len--;
+    consputc(BACKSPACE);
+  }
+}
+
+static void
+kill_line()
+{
+  set_cursor(CURSOR_RIGHT_MODE);
+  while(1){
+    int pos = get_cursor_position();
+    if(crt[pos - 2] == ('$' | 0x0700) || 
+       input.buf[(input.e - 1) % INPUT_BUF] == '\n'){
+      break;
+    }
+    backspace();
+  }
+}
+
+static void
+delete_last_word()
+{
+  int pos = get_cursor_position();
+  if(crt[pos - 2] == ('$' | 0x0700) || // is cursor at first of line?
+      input.buf[(input.e - 1) % INPUT_BUF] == '\n'){
+    return;
+  }
+
+  while(input.buf[(input.e - 1) % INPUT_BUF] == ' ') // remove spaces after last word
+    backspace();
+
+  while(1){ // remove last word
+    int pos = get_cursor_position();
+    if(crt[pos - 2] == ('$' | 0x0700) ||
+        input.buf[(input.e - 1) % INPUT_BUF] == ' '){
+      break;
+    }
+    backspace();
+  }
+}
+
+#define C(x)  ((x) - '@')  // Control-x
+#define S(x)  ((x) + ' ')  // Shift-x
 
 void
 consoleintr(int (*getc)(void))
@@ -200,22 +322,38 @@ consoleintr(int (*getc)(void))
       // procdump() locks cons.lock indirectly; invoke later
       doprocdump = 1;
       break;
+
     case C('U'):  // Kill line.
-      while(input.e != input.w &&
-            input.buf[(input.e-1) % INPUT_BUF] != '\n'){
-        input.e--;
-        consputc(BACKSPACE);
-      }
+      kill_line();
       break;
+
     case C('H'): case '\x7f':  // Backspace
-      if(input.e != input.w){
-        input.e--;
-        consputc(BACKSPACE);
-      }
+      backspace();
       break;
+
+    case S('['):  // Shift + [
+      set_cursor(CURSOR_LEFT_MODE);
+      break;
+
+    case S(']'):  // Shift + ]
+      set_cursor(CURSOR_RIGHT_MODE);
+      break;
+
+    case C('W'):  // Ctrl + w
+      delete_last_word();
+      break;
+
+    case '*':  // Print buffer (just for testing)
+      for(uint i = 0; i < input.len; i++)
+        consputc(input.buf[i] % INPUT_BUF);
+      break;
+
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
+        input.len++;
+        if(cursor_mode == CURSOR_LEFT_MODE)
+          shift_right_buffer();
         input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
@@ -296,4 +434,3 @@ consoleinit(void)
 
   ioapicenable(IRQ_KBD, 0);
 }
-
