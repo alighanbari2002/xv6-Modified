@@ -22,7 +22,7 @@ struct queue lotteryQueue;
 struct queue FCFSQueue;
 
 static struct proc *initproc;
-static uint rrCounter = 0;
+uint rrCounter = 0;
 
 int nextpid = 1;
 extern void forkret(void);
@@ -80,11 +80,23 @@ myproc(void) {
   return p;
 }
 
+void printQueue(struct queue q)
+{
+  int i = 0;
+  while(q.proc[i]->pid > 0 && q.proc[i]->pid < 7 && i < NPROC)
+  {
+    cprintf("\nprocess pid: %d, process name: %s, process state: %d, \n",
+      q.proc[i]->pid, q.proc[i]->name, q.proc[i]->state);
+    i++;
+  }
+}
+
 //PAGEBREAK: 32
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize
 // state required to run in the kernel.
 // Otherwise return 0.
+
 static struct proc*
 allocproc(void)
 {
@@ -103,7 +115,9 @@ allocproc(void)
 found:
 
   // Default scheduling queue
-  p->qType = DEF;
+  p->qType = RR;
+  ++rrQueue.pi;
+  rrQueue.proc[rrQueue.pi] = p;
 
   p->state = EMBRYO;
   p->pid = nextpid++;
@@ -239,13 +253,6 @@ fork(void)
   
   np->state = RUNNABLE;
 
-
-  // acquiresleep(&rrQueue.lock);
-  // np->qType = DEF;
-  // // rrQueue.pi++;
-  // rrQueue.proc[rrQueue.pi] = np;
-  // releasesleep(&rrQueue.lock);
-
   release(&ptable.lock);
 
   return pid;
@@ -256,53 +263,63 @@ fork(void)
 // until its parent calls wait() to find out it exited.
 
 // Lock of the q must have been acquired before usage.
-void shiftOutQueue(struct queue q, struct proc* p)
+void shiftOutQueue(struct queue* q, struct proc* p)
 {
   struct proc* temp;
   if(!holding(&ptable.lock))
   {
     panic("scheduling queue lock not held");
   }
-  int qi = 0;
-  for(; qi < q.pi; qi++)
+  int qi;
+  for(qi = 0; qi <= q->pi; qi++)
   {
-    if(q.proc[qi]->pid == p->pid)
+    if(q->proc[qi]->pid == p->pid)
     {
-      goto foundqproc;
+      break;
     }
   }
 
-foundqproc:
-  while(qi <= q.pi)
+  while(qi <= q->pi)
   {
-    temp = q.proc[qi];
-    q.proc[qi] = q.proc[qi+1];
-    q.proc[qi+1] = temp;
+    temp = q->proc[qi];
+    q->proc[qi] = q->proc[qi+1];
+    q->proc[qi+1] = temp;
     qi++;
   }
-  // Turn the outfit process to NULL
-  q.proc[qi] = (void*)(0);
+  q->proc[qi] = (void*)(0); // NULL
 
 }
-
 
 void cleanupCorresQueue(struct proc* p)
 {
   switch(p->qType)
   {
     case RR:
-      shiftOutQueue(rrQueue, p);
+      if(rrQueue.pi <= -1)
+      {
+        panic("nothing to clean");
+      }
+      shiftOutQueue(&rrQueue, p);
       rrQueue.pi--;
       break;
     case LOTTERY:
-      shiftOutQueue(lotteryQueue, p);
+      if(lotteryQueue.pi <= -1)
+      {
+        panic("nothing to clean");
+      }
+      shiftOutQueue(&lotteryQueue, p);
       lotteryQueue.pi--;
       break;
     case FCFS:
-      shiftOutQueue(FCFSQueue, p);
+      if(FCFSQueue.pi <= -1)
+      {
+        panic("nothing to clean");
+      }
+      shiftOutQueue(&FCFSQueue, p);
       FCFSQueue.pi--;
       break;
     default:
+      panic("defaut scheduling cleanup");
       break;
   }
 }
@@ -331,7 +348,9 @@ exit(void)
   curproc->cwd = 0;
 
   acquire(&ptable.lock);
-
+  // remove from corresponding scheduling queue
+  cleanupCorresQueue(curproc);
+  
   // Parent might be sleeping in wait().
   wakeup1(curproc->parent);
 
@@ -346,9 +365,6 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
-
-  // remove from corresponding scheduling queue
-  cleanupCorresQueue(curproc);
 
   sched();
   panic("zombie exit");
@@ -424,10 +440,8 @@ scheduler(void)
       p = rrQueue.proc[rrCounter % (rrQueue.pi+1)];
       if(p->state != RUNNABLE)
       {
-        panic("must not be in queue");
+        panic("RUNNABLE not found\n");
       }
-      rrCounter++;
-
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
@@ -437,14 +451,14 @@ scheduler(void)
     }
     else if(lotteryQueue.pi >= 0)
     {
-
+      panic("I'm in undeveloped queue");
     }
     else if(FCFSQueue.pi >= 0)
     {
       p = FCFSQueue.proc[0];
       if(p->state != RUNNABLE)
       {
-        panic("must not be in queue");
+        panic("must be in queue");
       }
 
       c->proc = p;
@@ -514,6 +528,10 @@ yield(void)
   // According to TRICKS file 
   // Change proc values before RUNNABLE
   myproc()->runningTicks = 0; // reset running ticks to 0
+  if(myproc()->qType == RR)
+  {
+    rrCounter++;
+  }
   myproc()->state = RUNNABLE;
   sched();
   release(&ptable.lock);
@@ -563,6 +581,8 @@ sleep(void *chan, struct spinlock *lk)
     acquire(&ptable.lock);  //DOC: sleeplock1
     release(lk);
   }
+  cleanupCorresQueue(p);
+  // Cleanup from queue on sleep
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
@@ -589,7 +609,25 @@ wakeup1(void *chan)
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
+    {
+      // Add to queue once again when woken up
+      if(p->qType == RR)
+      {
+        rrQueue.pi++;
+        rrQueue.proc[rrQueue.pi] = p;
+      }
+      else if(p->qType == LOTTERY)
+      {
+        lotteryQueue.pi++;
+        lotteryQueue.proc[lotteryQueue.pi] = p;
+      }
+      else if(p->qType == FCFS)
+      {
+        FCFSQueue.pi++;
+        FCFSQueue.proc[FCFSQueue.pi] = p;
+      }
       p->state = RUNNABLE;
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -615,7 +653,24 @@ kill(int pid)
       p->killed = 1;
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING)
+      {
+        if(p->qType == RR)
+        {
+          rrQueue.pi++;
+          rrQueue.proc[rrQueue.pi] = p;
+        }
+        else if(p->qType == LOTTERY)
+        {
+          lotteryQueue.pi++;
+          lotteryQueue.proc[lotteryQueue.pi] = p;
+        }
+        else if(p->qType == FCFS)
+        {
+          FCFSQueue.pi++;
+          FCFSQueue.proc[FCFSQueue.pi] = p;
+        }
         p->state = RUNNABLE;
+      }
       release(&ptable.lock);
       return 0;
     }
@@ -672,14 +727,13 @@ void print_proc_specs(void)
   [RUNNING]   "RUN     ",
   [ZOMBIE]    "ZOMBIE  "
   };
-  cprintf("name    pid      state    queue   arrive time     ticket      cycle\n");
-  cprintf("....................................................................\n");
-  cprintf("%s             %d          %s      %d        %d                 %d          %d\n");
-  acquire(&ptable.lock);
-  for(p = ptable.proc; p->state != UNUSED && p < &ptable.proc[NPROC]; p++)
+  cprintf("name  pid   state  queue  arrive time  ticket  cycle\n");
+  cprintf(".....................................................\n");
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
-     cprintf("%s             %d          %s           %d       %d                 %d          %d\n",
+    if(p->state == UNUSED)
+      continue;
+    cprintf("%s    %d     %s    %d      %d     %d          %d\n",
             p->name, p->pid, states[p->state], p->qType-RR, p->last_running, p->ticket, p->runningTicks);
   }
-  release(&ptable.lock);
 }

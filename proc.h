@@ -32,7 +32,7 @@ struct context {
   uint eip;
 };
 
-enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum procstate { UNUSED = 0, EMBRYO = 1, SLEEPING = 2, RUNNABLE = 3, RUNNING = 4, ZOMBIE = 5 };
 
 enum schedQ { RR = 1, LOTTERY = 2, FCFS = 3, DEF = 0 };
 
@@ -64,6 +64,6 @@ struct proc {
 //   fixed-size stack
 //   expandable heap
 
-#define TIME_SLOT 30
+#define TIME_SLOT 5
 
 void print_proc_specs(void);

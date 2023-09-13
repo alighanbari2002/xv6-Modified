@@ -11,6 +11,7 @@
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
+extern uint rrCounter;
 struct spinlock tickslock;
 uint ticks;
 
@@ -106,6 +107,7 @@ trap(struct trapframe *tf)
      tf->trapno == T_IRQ0+IRQ_TIMER)
     {
       myproc()->runningTicks++;
+      cprintf("\nprocees: %d, running ticks are: %d, counter: %d, name: %s\n", myproc()->pid, myproc()->runningTicks, rrCounter, myproc()->name);
       if(myproc()->qType == RR && myproc()->runningTicks >= TIME_SLOT)
       {
         yield();
