@@ -181,9 +181,9 @@ userinit(void)
   acquire(&ptable.lock);
 
   // Default scheduling queue
-  p->qType = RR;
-  rrQueue.pi++;
-  rrQueue.proc[rrQueue.pi] = p;
+  p->qType = FCFS;
+  FCFSQueue.pi++;
+  FCFSQueue.proc[FCFSQueue.pi] = p;
 
   p->state = RUNNABLE;
 
@@ -252,9 +252,9 @@ fork(void)
   acquire(&ptable.lock);
 
   // Default scheduling queue
-  np->qType = RR;
-  rrQueue.pi++;
-  rrQueue.proc[rrQueue.pi] = np;
+  np->qType = FCFS;
+  FCFSQueue.pi++;
+  FCFSQueue.proc[FCFSQueue.pi] = np;
   
   np->state = RUNNABLE;
 
@@ -440,9 +440,9 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    uint foundProc = 0;
     if(rrQueue.pi >= 0)
     {
-      uint foundProc = 0;
       p = rrQueue.proc[rrCounter % (rrQueue.pi+1)];
       if(p->state == RUNNABLE)
       {
@@ -469,7 +469,7 @@ scheduler(void)
         cprintf("number of processes in queue: %d\n", rrQueue.pi+1);
         panic("RUNNABLE not found\n");
       }
-      if(foundProc == 1)
+      if(foundProc)
       {
         c->proc = p;
         switchuvm(p);
@@ -487,17 +487,35 @@ scheduler(void)
     else if(FCFSQueue.pi >= 0)
     {
       p = FCFSQueue.proc[0];
-      if(p->state != RUNNABLE)
+      if(p->state == RUNNABLE)
       {
-        panic("must be in queue");
+        foundProc = 1;
       }
-
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-      c->proc = 0;
+      else if(p->state == RUNNING)
+      {
+        for(int i = 0; i < FCFSQueue.pi; i++)
+        {
+          if(FCFSQueue.proc[i+1]->state == RUNNABLE)
+          {
+            p = FCFSQueue.proc[i+1];
+            foundProc = 1;
+            break;
+          }
+        }
+      }
+      else
+      {
+        panic("RUNNABLE not found\n");
+      }
+      if(foundProc)
+      {
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        c->proc = 0;
+      }
     }
     else
     {
