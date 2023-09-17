@@ -55,7 +55,7 @@ struct proc {
   uint runningTicks;
   uint ticket;
   uint arriveTime;
-  uint last_running;
+  uint waitingTime;
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -65,5 +65,7 @@ struct proc {
 //   expandable heap
 
 #define TIME_SLOT 5
+#define AGING_BOUND 8000
 
 void print_proc_specs(void);
+void agingMechanism(void);

@@ -835,6 +835,29 @@ void print_proc_specs(void)
     if(p->state == UNUSED)
       continue;
     cprintf("%s    %d     %s    %d      %d     %d          %d\n",
-            p->name, p->pid, states[p->state], p->qType-RR, p->last_running, p->ticket, p->runningTicks);
+            p->name, p->pid, states[p->state], p->qType-RR, p->arriveTime, p->ticket, p->runningTicks);
   }
+}
+
+void agingMechanism(void)
+{
+  struct proc* p;
+  if(!holding(&ptable.lock))
+  {
+    acquire(&ptable.lock);
+  }
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->state == RUNNABLE)
+    {
+      p->waitingTime++;
+      if(p->waitingTime > AGING_BOUND && p->qType != RR)
+      {
+        cleanupCorresQueue(p);
+        rrQueue.pi++;
+        rrQueue.proc[rrQueue.pi] = p;
+      }
+    }
+  }
+  release(&ptable.lock);
 }
