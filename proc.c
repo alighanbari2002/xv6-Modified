@@ -21,6 +21,48 @@ struct queue rrQueue;
 struct queue lotteryQueue;
 struct queue FCFSQueue;
 
+uint randGen(uint seed)
+{
+  uint cticks;
+  if(!holding(&tickslock))
+  {
+    acquire(&tickslock);
+  }
+  cticks = ticks;
+  release(&tickslock);
+  seed += cticks;
+  seed <<= 5;
+  seed /= 13;
+  seed <<= 1;
+  seed *= 17;
+  seed >>= 2;
+  seed -= cticks / 3;
+  return seed / 3;
+}
+
+uint lotterySum()
+{
+  uint sum = 0;
+  for(int i = 0; i <= lotteryQueue.pi; i++)
+  {
+    sum = lotteryQueue.proc[i]->ticket;
+  }
+  return sum;
+}
+
+struct proc* lotteryWinner(uint luckyNumber)
+{
+  for(int i = 0; i <= lotteryQueue.pi; i++)
+  {
+    if(luckyNumber < lotteryQueue.proc[i]->ticket)
+    {
+      return lotteryQueue.proc[i];
+    }
+    luckyNumber -= lotteryQueue.proc[i]->ticket;
+  }
+  return (void*)(0);
+}
+
 static struct proc *initproc;
 uint rrCounter = 0;
 
@@ -78,17 +120,6 @@ myproc(void) {
   p = c->proc;
   popcli();
   return p;
-}
-
-void printQueue(struct queue q)
-{
-  int i = 0;
-  while(q.proc[i]->pid > 0 && q.proc[i]->pid < 7 && i < NPROC)
-  {
-    cprintf("\nprocess pid: %d, process name: %s, process state: %d, \n",
-      q.proc[i]->pid, q.proc[i]->name, q.proc[i]->state);
-    i++;
-  }
 }
 
 //PAGEBREAK: 32
@@ -181,9 +212,10 @@ userinit(void)
   acquire(&ptable.lock);
 
   // Default scheduling queue
-  p->qType = FCFS;
-  FCFSQueue.pi++;
-  FCFSQueue.proc[FCFSQueue.pi] = p;
+  p->qType = LOTTERY;
+  lotteryQueue.pi++;
+  lotteryQueue.proc[lotteryQueue.pi] = p;
+  p->ticket = randGen(p->pid) % 100;
 
   p->state = RUNNABLE;
 
@@ -252,9 +284,10 @@ fork(void)
   acquire(&ptable.lock);
 
   // Default scheduling queue
-  np->qType = FCFS;
-  FCFSQueue.pi++;
-  FCFSQueue.proc[FCFSQueue.pi] = np;
+  np->qType = LOTTERY;
+  lotteryQueue.pi++;
+  lotteryQueue.proc[lotteryQueue.pi] = np;
+  np->ticket = randGen(np->pid) % 100;
   
   np->state = RUNNABLE;
 
@@ -464,9 +497,6 @@ scheduler(void)
       }
       else
       {
-        cprintf("process state: %d\n",p->state);
-        cprintf("process name: %s\n", p->name);
-        cprintf("number of processes in queue: %d\n", rrQueue.pi+1);
         panic("RUNNABLE not found\n");
       }
       if(foundProc)
@@ -482,7 +512,28 @@ scheduler(void)
     }
     else if(lotteryQueue.pi >= 0)
     {
-      panic("I'm in undeveloped queue");
+      uint cticks;
+      acquire(&tickslock);
+      cticks = ticks;
+      release(&tickslock);
+      uint luckyNumber = randGen(cticks) % lotterySum();
+      p = lotteryWinner(luckyNumber);
+      if(p == (void*)(0))
+      {
+        panic("no winner of lottery found");
+      }
+      if(p->state == RUNNABLE)
+      {
+        foundProc = 1;
+      }
+      else if(p->state == RUNNING)
+      {
+        foundProc = 0;
+      }
+      else
+      {
+        panic("RUNNABLE not found\n");
+      }
     }
     else if(FCFSQueue.pi >= 0)
     {
@@ -507,23 +558,15 @@ scheduler(void)
       {
         panic("RUNNABLE not found\n");
       }
-      if(foundProc)
-      {
-        c->proc = p;
-        switchuvm(p);
-        p->state = RUNNING;
-        swtch(&(c->scheduler), p->context);
-        switchkvm();
-        c->proc = 0;
-      }
     }
     else
     {
       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
       {
         if(p->state != RUNNABLE)
+        {
           continue;
-
+        }
         // Switch to chosen process.  It is the process's job
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
@@ -538,6 +581,15 @@ scheduler(void)
         // It should have changed its p->state before coming back.
         c->proc = 0;
       }
+    }
+    if(foundProc)
+    {
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+      c->proc = 0;
     }
     release(&ptable.lock);
   }

@@ -53,7 +53,7 @@ struct proc {
   char name[16];               // Process name (debugging)
   enum schedQ qType;
   uint runningTicks;
-  int ticket;
+  uint ticket;
   uint arriveTime;
   uint last_running;
 };

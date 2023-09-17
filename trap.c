@@ -112,7 +112,7 @@ trap(struct trapframe *tf)
       {
         yield();
       }
-      else if(myproc()->qType == DEF)
+      else if(myproc()->qType == DEF || myproc()->qType == LOTTERY) // Assuming that lottery has time slot of 1
       {
         yield();
       }
