@@ -114,11 +114,6 @@ allocproc(void)
 
 found:
 
-  // Default scheduling queue
-  p->qType = RR;
-  ++rrQueue.pi;
-  rrQueue.proc[rrQueue.pi] = p;
-
   p->state = EMBRYO;
   p->pid = nextpid++;
 
@@ -185,6 +180,11 @@ userinit(void)
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
 
+  // Default scheduling queue
+  p->qType = RR;
+  rrQueue.pi++;
+  rrQueue.proc[rrQueue.pi] = p;
+
   p->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -250,6 +250,11 @@ fork(void)
   pid = np->pid;
 
   acquire(&ptable.lock);
+
+  // Default scheduling queue
+  np->qType = RR;
+  rrQueue.pi++;
+  rrQueue.proc[rrQueue.pi] = np;
   
   np->state = RUNNABLE;
 
@@ -319,7 +324,7 @@ void cleanupCorresQueue(struct proc* p)
       FCFSQueue.pi--;
       break;
     default:
-      panic("defaut scheduling cleanup");
+      // panic("defaut scheduling cleanup");
       break;
   }
 }
@@ -437,17 +442,43 @@ scheduler(void)
     acquire(&ptable.lock);
     if(rrQueue.pi >= 0)
     {
+      uint foundProc = 0;
       p = rrQueue.proc[rrCounter % (rrQueue.pi+1)];
-      if(p->state != RUNNABLE)
+      if(p->state == RUNNABLE)
       {
+        foundProc = 1;
+      }
+      else if(p->state == RUNNING)
+      {
+        // Find a new process to run for the idle core
+        // Loop over queue with amount of its length
+        for(int i = 0; i < rrQueue.pi; i++)
+        {
+          if(rrQueue.proc[(rrCounter+i+1) % (rrQueue.pi+1)]->state == RUNNABLE)
+          {
+            p = rrQueue.proc[(rrCounter+i+1) % (rrQueue.pi+1)];
+            foundProc = 1;
+            break;
+          }
+        }
+      }
+      else
+      {
+        cprintf("process state: %d\n",p->state);
+        cprintf("process name: %s\n", p->name);
+        cprintf("number of processes in queue: %d\n", rrQueue.pi+1);
         panic("RUNNABLE not found\n");
       }
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-      c->proc = 0;
+      if(foundProc == 1)
+      {
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        c->proc = 0;
+      }
+      // else release the lock (core remains idle)
     }
     else if(lotteryQueue.pi >= 0)
     {
