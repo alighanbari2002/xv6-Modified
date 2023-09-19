@@ -4,8 +4,9 @@
 
 int main()
 {
-    for(uint i = 0; i < 99999999; i++)
+    for(uint i = 0; i < 100; i++)
     {
+        printf(1, "2\n");
     }
     exit();
 }

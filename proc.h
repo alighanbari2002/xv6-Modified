@@ -65,7 +65,8 @@ struct proc {
 //   expandable heap
 
 #define TIME_SLOT 5
-#define AGING_BOUND 8000
+#define AGING_BOUND 200
+#define FCFS_UPPER_BOUND 500
 
 void print_proc_specs(void);
 void agingMechanism(void);

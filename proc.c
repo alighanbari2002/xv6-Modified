@@ -284,9 +284,9 @@ fork(void)
   acquire(&ptable.lock);
 
   // Default scheduling queue
-  np->qType = LOTTERY;
-  lotteryQueue.pi++;
-  lotteryQueue.proc[lotteryQueue.pi] = np;
+  np->qType = FCFS;
+  FCFSQueue.pi++;
+  FCFSQueue.proc[FCFSQueue.pi] = np;
   np->ticket = randGen(np->pid) % 100;
   
   np->state = RUNNABLE;
@@ -335,7 +335,7 @@ void cleanupCorresQueue(struct proc* p)
     case RR:
       if(rrQueue.pi <= -1)
       {
-        panic("nothing to clean");
+        panic("rr: nothing to clean");
       }
       shiftOutQueue(&rrQueue, p);
       rrQueue.pi--;
@@ -343,7 +343,7 @@ void cleanupCorresQueue(struct proc* p)
     case LOTTERY:
       if(lotteryQueue.pi <= -1)
       {
-        panic("nothing to clean");
+        panic("lottery: nothing to clean");
       }
       shiftOutQueue(&lotteryQueue, p);
       lotteryQueue.pi--;
@@ -351,13 +351,13 @@ void cleanupCorresQueue(struct proc* p)
     case FCFS:
       if(FCFSQueue.pi <= -1)
       {
-        panic("nothing to clean");
+        panic("FCFS: nothing to clean");
       }
       shiftOutQueue(&FCFSQueue, p);
       FCFSQueue.pi--;
       break;
     default:
-      // panic("defaut scheduling cleanup");
+      panic("defaut scheduling cleanup");
       break;
   }
 }
@@ -476,7 +476,9 @@ scheduler(void)
     uint foundProc = 0;
     if(rrQueue.pi >= 0)
     {
+      // cprintf("\n\nI'm in rr\n\n\n");
       p = rrQueue.proc[rrCounter % (rrQueue.pi+1)];
+      // cprintf("\nmy name is: %s, and my id: %d, state: %d\n", p->name, p->pid, p->state);
       if(p->state == RUNNABLE)
       {
         foundProc = 1;
@@ -499,16 +501,6 @@ scheduler(void)
       {
         panic("RUNNABLE not found\n");
       }
-      if(foundProc)
-      {
-        c->proc = p;
-        switchuvm(p);
-        p->state = RUNNING;
-        swtch(&(c->scheduler), p->context);
-        switchkvm();
-        c->proc = 0;
-      }
-      // else release the lock (core remains idle)
     }
     else if(lotteryQueue.pi >= 0)
     {
@@ -570,6 +562,7 @@ scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
+        p->waitingTime = 0;
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
@@ -584,6 +577,9 @@ scheduler(void)
     }
     if(foundProc)
     {
+      // cprintf("I'm here to be run\n");
+      // cprintf("name: %s, id: %d, q: %d\n", p->name, p->pid, p->qType);
+      p->waitingTime = 0;
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
@@ -682,6 +678,7 @@ sleep(void *chan, struct spinlock *lk)
     acquire(&ptable.lock);  //DOC: sleeplock1
     release(lk);
   }
+  // cprintf("\n\npid: %d, name: %s, q: %d going to sleep\n\n", p->pid, p->name, p->qType);
   cleanupCorresQueue(p);
   // Cleanup from queue on sleep
   // Go to sleep.
@@ -854,6 +851,7 @@ void agingMechanism(void)
       if(p->waitingTime > AGING_BOUND && p->qType != RR)
       {
         cleanupCorresQueue(p);
+        p->qType = RR;
         rrQueue.pi++;
         rrQueue.proc[rrQueue.pi] = p;
       }

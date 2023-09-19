@@ -108,12 +108,17 @@ trap(struct trapframe *tf)
      tf->trapno == T_IRQ0+IRQ_TIMER)
     {
       myproc()->runningTicks++;
-      cprintf("\nprocees: %d, running ticks are: %d, counter: %d, name: %s\n", myproc()->pid, myproc()->runningTicks, rrCounter, myproc()->name);
+      cprintf("\nprocees: %d, running ticks are: %d\n",
+        myproc()->pid, myproc()->runningTicks);
       if(myproc()->qType == RR && myproc()->runningTicks >= TIME_SLOT)
       {
         yield();
       }
       else if(myproc()->qType == DEF || myproc()->qType == LOTTERY) // Assuming that lottery has time slot of 1
+      {
+        yield();
+      }
+      else if(myproc()->qType == FCFS && myproc()->runningTicks > FCFS_UPPER_BOUND)
       {
         yield();
       }

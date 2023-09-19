@@ -10,12 +10,19 @@ int main()
     char* argv[] = {"qRRTest2", 0};
     if(pid == 0)
     {
-        exec("./qRRTest2", argv);
-        printf(1, "exec failed!\n");
+        for(uint i = 0; i < 99999999; i++)
+        {
+            for(uint j = 0; j < 9999; j++)
+            {
+            }
+        }
         exit();
     }
     for(uint i = 0; i < 99999999; i++)
     {
+        for(uint j = 0; j < 9999; j++)
+        {
+        }
     }
     wait();
     exit();
