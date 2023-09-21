@@ -9,6 +9,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+enum schedQ;
 
 // bio.c
 void            binit(void);
@@ -120,6 +121,9 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+void            print_proc(void);
+void            agingMechanism(void);
+void            change_queue(int, enum schedQ);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

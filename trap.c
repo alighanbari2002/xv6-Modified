@@ -108,8 +108,6 @@ trap(struct trapframe *tf)
      tf->trapno == T_IRQ0+IRQ_TIMER)
     {
       myproc()->runningTicks++;
-      cprintf("\nprocees: %d, running ticks are: %d\n",
-        myproc()->pid, myproc()->runningTicks);
       if(myproc()->qType == RR && myproc()->runningTicks >= TIME_SLOT)
       {
         yield();

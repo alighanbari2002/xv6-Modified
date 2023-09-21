@@ -104,6 +104,8 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_print_proc(void);
+extern int sys_change_queue(void);
+extern int sys_init_ticket(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -127,7 +129,9 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-[SYS_print_proc] sys_print_proc
+[SYS_print_proc] sys_print_proc,
+[SYS_change_queue] sys_change_queue,
+[SYS_init_ticket] sys_init_ticket
 };
 
 void

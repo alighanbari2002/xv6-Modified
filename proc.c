@@ -476,9 +476,7 @@ scheduler(void)
     uint foundProc = 0;
     if(rrQueue.pi >= 0)
     {
-      // cprintf("\n\nI'm in rr\n\n\n");
       p = rrQueue.proc[rrCounter % (rrQueue.pi+1)];
-      // cprintf("\nmy name is: %s, and my id: %d, state: %d\n", p->name, p->pid, p->state);
       if(p->state == RUNNABLE)
       {
         foundProc = 1;
@@ -577,8 +575,6 @@ scheduler(void)
     }
     if(foundProc)
     {
-      // cprintf("I'm here to be run\n");
-      // cprintf("name: %s, id: %d, q: %d\n", p->name, p->pid, p->qType);
       p->waitingTime = 0;
       c->proc = p;
       switchuvm(p);
@@ -678,7 +674,6 @@ sleep(void *chan, struct spinlock *lk)
     acquire(&ptable.lock);  //DOC: sleeplock1
     release(lk);
   }
-  // cprintf("\n\npid: %d, name: %s, q: %d going to sleep\n\n", p->pid, p->name, p->qType);
   cleanupCorresQueue(p);
   // Cleanup from queue on sleep
   // Go to sleep.
@@ -814,7 +809,7 @@ procdump(void)
   }
 }
 
-void print_proc_specs(void)
+void print_proc(void)
 {
   struct proc* p;
   char *states[] = {
@@ -856,6 +851,44 @@ void agingMechanism(void)
         rrQueue.proc[rrQueue.pi] = p;
       }
     }
+  }
+  release(&ptable.lock);
+}
+
+void change_queue(int pid, enum schedQ queueID)
+{
+  struct proc* p;
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->pid == pid)
+    {
+      break;
+    }
+  }
+  if(p->pid != pid)
+  {
+    panic("incorrect pid");
+  }
+  cleanupCorresQueue(p);
+  switch (queueID)
+  {
+    case DEF:
+      break;
+    case RR:
+      rrQueue.pi++;
+      rrQueue.proc[rrQueue.pi] = p;
+      break;
+    case LOTTERY:
+      lotteryQueue.pi++;
+      lotteryQueue.proc[lotteryQueue.pi] = p; 
+      break;
+    case FCFS:
+      FCFSQueue.pi++;
+      FCFSQueue.proc[FCFSQueue.pi] = p;
+      break;
+    default:
+      panic("undefined queue");
   }
   release(&ptable.lock);
 }

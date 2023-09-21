@@ -94,5 +94,39 @@ void
 sys_print_proc(void)
 {
   // since ptable is only accessible in proc.c we need yet another wrapper
-  print_proc_specs();
+  print_proc();
+}
+
+int
+sys_change_queue(void)
+{
+  int pid;
+  enum schedQ queueID;
+  if(argint(0, &pid) < 0 ||
+    argint(0, &queueID) < 0 ||
+    (queueID != DEF &&
+    queueID != RR &&
+    queueID != LOTTERY &&
+    queueID != FCFS))
+  {
+    return -1;
+  }
+  myproc()->qType = queueID;
+  change_queue(pid, queueID);
+  return 0;
+}
+
+int
+sys_init_ticket(void)
+{
+  int pid;
+  uint ticket;
+  if(argint(0, &pid) < 0 ||
+    argint(1, &ticket) < 0 ||
+    ticket > 100)
+  {
+    return -1;
+  }
+  myproc()->ticket = ticket;
+  return 0;
 }
