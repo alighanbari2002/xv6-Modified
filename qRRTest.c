@@ -7,7 +7,6 @@
 int main()
 {
     int pid = fork();
-    char* argv[] = {"qRRTest2", 0};
     if(pid == 0)
     {
         for(uint i = 0; i < 99999999; i++)

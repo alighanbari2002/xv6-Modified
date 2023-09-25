@@ -171,6 +171,10 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  acquire(&tickslock);
+  p->arriveTime = ticks;
+  release(&tickslock);
+
   return p;
 }
 
@@ -704,20 +708,22 @@ wakeup1(void *chan)
     if(p->state == SLEEPING && p->chan == chan)
     {
       // Add to queue once again when woken up
-      if(p->qType == RR)
+      switch(p->qType)
       {
-        rrQueue.pi++;
-        rrQueue.proc[rrQueue.pi] = p;
-      }
-      else if(p->qType == LOTTERY)
-      {
-        lotteryQueue.pi++;
-        lotteryQueue.proc[lotteryQueue.pi] = p;
-      }
-      else if(p->qType == FCFS)
-      {
-        FCFSQueue.pi++;
-        FCFSQueue.proc[FCFSQueue.pi] = p;
+        case RR:
+          rrQueue.pi++;
+          rrQueue.proc[rrQueue.pi] = p;
+          break;
+        case LOTTERY:
+          lotteryQueue.pi++;
+          lotteryQueue.proc[lotteryQueue.pi] = p;
+          break;
+        case FCFS:
+          FCFSQueue.pi++;
+          FCFSQueue.proc[FCFSQueue.pi] = p;
+          break;
+        default:
+          break;
       }
       p->state = RUNNABLE;
     }

@@ -103,7 +103,7 @@ sys_change_queue(void)
   int pid;
   enum schedQ queueID;
   if(argint(0, &pid) < 0 ||
-    argint(0, &queueID) < 0 ||
+    argint(0, (int*)(&queueID)) < 0 ||
     (queueID != DEF &&
     queueID != RR &&
     queueID != LOTTERY &&
@@ -122,7 +122,7 @@ sys_init_ticket(void)
   int pid;
   uint ticket;
   if(argint(0, &pid) < 0 ||
-    argint(1, &ticket) < 0 ||
+    argint(1, (int*)(&ticket)) < 0 ||
     ticket > 100)
   {
     return -1;
