@@ -293,11 +293,13 @@ delete_last_word()
       input.buf[(input.e - 1) % INPUT_BUF] == '\n'){
     return;
   }
-
-  while(input.buf[(input.e - 1) % INPUT_BUF] == ' ') // remove spaces after last word
+  
+  // remove spaces after last word
+  while(input.buf[(input.e - 1) % INPUT_BUF] == ' ')
     backspace();
-
-  while(1){ // remove last word
+  
+  // remove last word
+  while(1){
     int pos = get_cursor_position();
     if(crt[pos - 2] == ('$' | 0x0700) ||
         input.buf[(input.e - 1) % INPUT_BUF] == ' '){
