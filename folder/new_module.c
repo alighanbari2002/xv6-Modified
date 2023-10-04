@@ -5,7 +5,7 @@ MODULE_LICENSE("GPL");
 
 int init_module(void)
 {
-    printk(KERN_INFO, " /-----------------------------\\\n | Group Members:              |\n |  - Ali Ghanbari %% 810199473 |\n |  - Behrad Elmi  %% 810199557 |\n |  - Bita Nasiri  %% 810199504 |\n \\-----------------------------/\n\n");
+    printk(KERN_INFO "Group Members:\n    - Ali Ghanbari\n    - Behrad Elmi\n    - Bita Nasiri\n");
     return 0;
 }
 
