@@ -93,7 +93,9 @@ sys_uptime(void)
 void
 sys_print_proc(void)
 {
-  // since ptable is only accessible in proc.c we need yet another wrapper
+  // since ptable is only accessible in proc.c
+  // we need yet another wrapper or
+  // could've used extern keyword
   print_proc();
 }
 

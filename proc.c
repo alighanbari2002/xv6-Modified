@@ -288,9 +288,9 @@ fork(void)
   acquire(&ptable.lock);
 
   // Default scheduling queue
-  np->qType = FCFS;
-  FCFSQueue.pi++;
-  FCFSQueue.proc[FCFSQueue.pi] = np;
+  np->qType = LOTTERY;
+  lotteryQueue.pi++;
+  lotteryQueue.proc[lotteryQueue.pi] = np;
   np->ticket = randGen(np->pid) % 100;
   
   np->state = RUNNABLE;
@@ -815,26 +815,83 @@ procdump(void)
   }
 }
 
+char* wrap_space(char* inp, char* holder, const int len)
+{
+  memset(holder, ' ', len);
+  holder[len] = 0;
+  int n = len;
+  int i = 0;
+  while(n-- > 0)
+  {
+    if(*(inp + i) == 0)
+      break;
+    *(holder + i) = *(inp + i);
+    i++;
+  }
+  return holder;
+}
+
+char* wrap_spacei(int inp, char* holder, const int len)
+{
+  if(inp < 0)
+  {
+    panic("negative pid or arrive time");
+  }
+  memset(holder, ' ', len);
+  holder[len] = 0;
+  int rev = 0;
+  int cnt = 0;
+  do
+  {
+    rev *= 10;
+    rev += (inp % 10);
+    inp /= 10;
+    cnt++;
+  } while(inp > 0);
+  for(int i = 0; i < cnt; i++)
+  {
+    holder[i] = (rev % 10) + '0';
+    rev /= 10;
+  }
+  return holder;
+}
+
+#define NAME_LEN 15
+#define PID_LEN 3
+#define STATE_LEN 8
+#define AT_LEN 12
+#define TICKET_LEN 3
+#define TICKS_LEN 6
+
 void print_proc(void)
 {
   struct proc* p;
   char *states[] = {
   [UNUSED]    "UNUSED  ",
   [EMBRYO]    "EMBRYO  ",
-  [SLEEPING]  "SLEEP   ",
+  [SLEEPING]  "SLEEPING",
   [RUNNABLE]  "RUNNABLE",
-  [RUNNING]   "RUN     ",
+  [RUNNING]   "RUNNING ",
   [ZOMBIE]    "ZOMBIE  "
   };
-  cprintf("name  pid   state  queue  arrive time  ticket  cycle\n");
-  cprintf(".....................................................\n");
+  cprintf("name            pid  state    queue  arrive time  ticket  cycle\n");
+  cprintf("...............................................................\n");
+  acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
     if(p->state == UNUSED)
       continue;
-    cprintf("%s    %d     %s    %d      %d     %d          %d\n",
-            p->name, p->pid, states[p->state], p->qType-RR, p->arriveTime, p->ticket, p->runningTicks);
+    char name_holder[NAME_LEN + 1];
+    char pid_holder[PID_LEN + 1];
+    char at_holder[AT_LEN + 1];
+    char ticket_holder[TICKET_LEN+1];
+    char ticks_holder[TICKS_LEN+1];
+    cprintf("%s %s  %s %d      %s %s     %s\n",
+            wrap_space(p->name, name_holder, NAME_LEN), wrap_spacei(p->pid, pid_holder, PID_LEN),
+            states[p->state], p->qType-RR, wrap_spacei(p->arriveTime, at_holder, AT_LEN), 
+            wrap_spacei(p->ticket, ticket_holder, TICKET_LEN), wrap_spacei(p->runningTicks, ticks_holder, TICKS_LEN));
   }
+  release(&ptable.lock);
 }
 
 void agingMechanism(void)

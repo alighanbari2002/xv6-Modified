@@ -104,3 +104,20 @@ memmove(void *vdst, const void *vsrc, int n)
     *dst++ = *src++;
   return vdst;
 }
+
+int calc(int num)
+{
+    int c = 0;
+    for(uint i = 0; i < num; i++)
+    {
+        for(uint j = 0; j < num; j++)
+        {
+            for(uint k = 0; k < num; j++)
+            {
+                c >>= 10;
+                c <<= 10;
+            }
+        }
+    }
+    return 0;
+}
