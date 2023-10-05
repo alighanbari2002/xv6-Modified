@@ -23,13 +23,7 @@ struct queue FCFSQueue;
 
 uint randGen(uint seed)
 {
-  uint cticks;
-  if(!holding(&tickslock))
-  {
-    acquire(&tickslock);
-  }
-  cticks = ticks;
-  release(&tickslock);
+  uint cticks = ticks;
   seed += cticks;
   seed <<= 5;
   seed /= 13;
@@ -506,10 +500,7 @@ scheduler(void)
     }
     else if(lotteryQueue.pi >= 0)
     {
-      uint cticks;
-      acquire(&tickslock);
-      cticks = ticks;
-      release(&tickslock);
+      uint cticks = ticks;
       uint luckyNumber = randGen(cticks) % lotterySum();
       p = lotteryWinner(luckyNumber);
       if(p == (void*)(0))
