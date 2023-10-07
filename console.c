@@ -137,6 +137,16 @@ struct {
   uint len; // Buffer length
 } input;
 
+#define HIST_SIZE 15
+struct {
+  uint hist_idx;
+  char cmd_buf[HIST_SIZE][INPUT_BUF];
+
+  ushort is_suggestion_used;
+  char original_cmd[INPUT_BUF];
+  uint original_cmd_size;
+} hist;
+
 static int
 get_cursor_position()
 {
@@ -272,20 +282,6 @@ backspace()
 }
 
 static void
-kill_line()
-{
-  set_cursor(CURSOR_RIGHT_MODE);
-  while(1){
-    int pos = get_cursor_position();
-    if(crt[pos - 2] == ('$' | 0x0700) || 
-       input.buf[(input.e - 1) % INPUT_BUF] == '\n'){
-      break;
-    }
-    backspace();
-  }
-}
-
-static void
 delete_last_word()
 {
   int pos = get_cursor_position();
@@ -309,6 +305,47 @@ delete_last_word()
   }
 }
 
+static void
+consclear()
+{
+  set_cursor(CURSOR_RIGHT_MODE);
+  while(1){
+    int pos = get_cursor_position();
+    if(crt[pos - 2] == ('$' | 0x0700) || 
+       input.buf[(input.e - 1) % INPUT_BUF] == '\n'){
+      break;
+    }
+    backspace();
+  }
+}
+
+static void
+consputs(const char* str)
+{
+  for(uint i = 0; i < INPUT_BUF && (str[i]); i++){
+    input.len++;
+    if(cursor_mode == CURSOR_LEFT_MODE)
+      shift_right_buffer();
+    input.buf[input.e++ % INPUT_BUF] = str[i];
+    consputc(str[i]);
+  }
+}
+
+static void
+add_hist()
+{
+  if(input.len == 1)
+    return;
+  memset(hist.cmd_buf[hist.hist_idx], 0, INPUT_BUF);
+  memmove(hist.cmd_buf[hist.hist_idx],
+          input.buf + input.w,
+          input.len);
+  hist.hist_idx = (hist.hist_idx + 1) % HIST_SIZE;
+  hist.is_suggestion_used = 0;
+  hist.original_cmd_size = 0;
+  memset(hist.original_cmd, 0, INPUT_BUF);
+}
+
 #define C(x)  ((x) - '@')  // Control-x
 #define S(x)  ((x) + ' ')  // Shift-x
 
@@ -325,8 +362,26 @@ consoleintr(int (*getc)(void))
       doprocdump = 1;
       break;
 
+    case 't':
+      char bb[INPUT_BUF];
+      memset(bb, 0, INPUT_BUF);
+      memmove(bb, 
+      input.buf + input.w,
+          input.len);
+      consclear();
+      consputs(bb);
+      input.len++;
+      input.buf[input.e++ % INPUT_BUF] = '~';
+      consputc('~');
+      break;
+
+    case '*':  // Print buffer (just for testing)
+      for(uint i = 0; i < input.len; i++)
+        consputc(input.buf[i]);
+      break;
+
     case C('U'):  // Kill line.
-      kill_line();
+      consclear();
       break;
 
     case C('H'): case '\x7f':  // Backspace
@@ -345,13 +400,26 @@ consoleintr(int (*getc)(void))
       delete_last_word();
       break;
 
-    case '*':  // Print buffer (just for testing)
-      for(uint i = 0; i < input.len; i++)
-        consputc(input.buf[i] % INPUT_BUF);
-      break;
+    case 27: // Escape sequence for arrow history.
+      if((c = getc()) == 91){
+        if((c = getc()) == 65){
+          consputc('U');
+          break;
+        }
+        else if (c == 66){
+          consputc('D');
+          break;
+        }
+        else{
+          input.buf[input.e++ % INPUT_BUF] = 27;
+          consputc(27);
+          input.buf[input.e++ % INPUT_BUF] = 91;
+          consputc(91);
+        }
+      }
 
     default:
-      if(c != 0 && input.e-input.r < INPUT_BUF){
+      if(c != 0 && input.e-input.r < INPUT_BUF && input.len < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
         input.len++;
         if(cursor_mode == CURSOR_LEFT_MODE)
@@ -359,6 +427,8 @@ consoleintr(int (*getc)(void))
         input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
+          add_hist();
+          input.len = 0;
           input.w = input.e;
           wakeup(&input.r);
         }
