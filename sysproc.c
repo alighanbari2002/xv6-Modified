@@ -103,9 +103,9 @@ int
 sys_change_queue(void)
 {
   int pid;
-  enum schedQ queueID;
+  int queueID;
   if(argint(0, &pid) < 0 ||
-    argint(0, (int*)(&queueID)) < 0 ||
+    argint(1, &queueID) < 0 ||
     (queueID != DEF &&
     queueID != RR &&
     queueID != LOTTERY &&
@@ -113,7 +113,6 @@ sys_change_queue(void)
   {
     return -1;
   }
-  myproc()->qType = queueID;
   change_queue(pid, queueID);
   return 0;
 }
@@ -129,6 +128,6 @@ sys_init_ticket(void)
   {
     return -1;
   }
-  myproc()->ticket = ticket;
+  init_ticket(pid, ticket);
   return 0;
 }

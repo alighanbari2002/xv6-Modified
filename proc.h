@@ -56,6 +56,7 @@ struct proc {
   uint ticket;
   uint arriveTime;
   uint waitingTime;
+  ushort changeQueueRunning;  // If changing a process's queue while running is 1 else 0
 };
 
 // Process memory is laid out contiguously, low addresses first:

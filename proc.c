@@ -165,9 +165,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  acquire(&tickslock);
   p->arriveTime = ticks;
-  release(&tickslock);
 
   return p;
 }
@@ -356,7 +354,6 @@ void cleanupCorresQueue(struct proc* p)
       break;
     default:
       panic("defaut scheduling cleanup");
-      break;
   }
 }
 
@@ -619,6 +616,28 @@ yield(void)
   if(myproc()->qType == RR)
   {
     rrCounter++;
+  }
+  if(myproc()->changeQueueRunning)
+  {
+    switch(myproc()->qType)
+    {
+      case RR:
+        rrQueue.pi++;
+        rrQueue.proc[rrQueue.pi] = myproc();
+      break;
+      case LOTTERY:
+        lotteryQueue.pi++;
+        lotteryQueue.proc[lotteryQueue.pi] = myproc();
+        break;
+      case FCFS:
+        FCFSQueue.pi++;
+        FCFSQueue.proc[FCFSQueue.pi] = myproc();
+        break;
+      default:
+        break;
+    }
+    // Change has been applied
+    myproc()->changeQueueRunning = 0;
   }
   myproc()->state = RUNNABLE;
   sched();
@@ -909,7 +928,7 @@ void agingMechanism(void)
   release(&ptable.lock);
 }
 
-void change_queue(int pid, enum schedQ queueID)
+void change_queue(int pid, int queueID)
 {
   struct proc* p;
   acquire(&ptable.lock);
@@ -922,27 +941,69 @@ void change_queue(int pid, enum schedQ queueID)
   }
   if(p->pid != pid)
   {
-    panic("incorrect pid");
+    cprintf("incorrect pid");
+    release(&ptable.lock);
+    return;
   }
-  cleanupCorresQueue(p);
-  switch (queueID)
+  if(p->state == RUNNING || p->state == RUNNABLE)
+  {
+    cleanupCorresQueue(p);
+  }
+  switch(queueID)
   {
     case DEF:
+      p->qType = DEF;
       break;
     case RR:
-      rrQueue.pi++;
-      rrQueue.proc[rrQueue.pi] = p;
+      p->qType = RR;
+      if(p->state == RUNNABLE)
+      {
+        rrQueue.pi++;
+        rrQueue.proc[rrQueue.pi] = p;
+      }
       break;
     case LOTTERY:
-      lotteryQueue.pi++;
-      lotteryQueue.proc[lotteryQueue.pi] = p; 
+      p->qType = LOTTERY;
+      if(p->state == RUNNABLE)
+      {
+        lotteryQueue.pi++;
+        lotteryQueue.proc[lotteryQueue.pi] = p;
+      }
       break;
     case FCFS:
-      FCFSQueue.pi++;
-      FCFSQueue.proc[FCFSQueue.pi] = p;
+      p->qType = FCFS;
+      if(p->state == RUNNABLE)
+      {
+        FCFSQueue.pi++;
+        FCFSQueue.proc[FCFSQueue.pi] = p;
+      }
       break;
     default:
-      panic("undefined queue");
+      cprintf("undefined queue");
+  }
+
+  if(p->state == RUNNING)
+  {
+    p->changeQueueRunning = 1;
+  }
+  release(&ptable.lock);
+}
+
+void init_ticket(int pid, uint ticket)
+{
+  struct proc* p;
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->pid == pid)
+    {
+      p->ticket = ticket;
+      break;
+    }
+  }
+  if(p->pid != pid)
+  {
+    cprintf("incorrect pid");
   }
   release(&ptable.lock);
 }

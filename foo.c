@@ -17,16 +17,6 @@ int main()
         calc(HIGH);
         exit();
     }
-    else if(!fork())
-    {
-        calc(HIGH);
-        exit();
-    }
-    else if(!fork())
-    {
-        calc(HIGH);
-        exit();
-    }
     else
     {
         calc(HIGH);
