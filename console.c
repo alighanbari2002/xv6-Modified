@@ -137,10 +137,12 @@ struct {
   uint len; // Buffer length
 } input;
 
-#define HIST_SIZE 15
+#define MAX_HIST_SIZE 15
 struct {
   uint hist_idx;
-  char cmd_buf[HIST_SIZE][INPUT_BUF];
+  uint hist_size;
+  uint last_arrow_idx;
+  char cmd_buf[MAX_HIST_SIZE][INPUT_BUF];
 
   ushort is_suggestion_used;
   char original_cmd[INPUT_BUF];
@@ -339,11 +341,31 @@ add_hist()
   memset(hist.cmd_buf[hist.hist_idx], 0, INPUT_BUF);
   memmove(hist.cmd_buf[hist.hist_idx],
           input.buf + input.w,
-          input.len);
-  hist.hist_idx = (hist.hist_idx + 1) % HIST_SIZE;
+          input.len - 1);
+  hist.last_arrow_idx = hist.hist_idx;
+  hist.hist_idx = (hist.hist_idx + 1) % MAX_HIST_SIZE;
+  hist.hist_size = (hist.hist_size >= MAX_HIST_SIZE) ? MAX_HIST_SIZE: hist.hist_size + 1;
   hist.is_suggestion_used = 0;
   hist.original_cmd_size = 0;
   memset(hist.original_cmd, 0, INPUT_BUF);
+}
+
+static void
+hist_up()
+{
+  if((hist.hist_idx - hist.last_arrow_idx - 1 + MAX_HIST_SIZE) % MAX_HIST_SIZE == 0){
+    consputc('\a'); // beep
+    return;
+  }
+  consclear();
+  consputs(hist.cmd_buf[hist.last_arrow_idx]);
+  hist.last_arrow_idx = (hist.last_arrow_idx - 1 + MAX_HIST_SIZE) % MAX_HIST_SIZE;
+}
+
+static void
+hist_down()
+{
+
 }
 
 #define C(x)  ((x) - '@')  // Control-x
@@ -363,16 +385,15 @@ consoleintr(int (*getc)(void))
       break;
 
     case 't':
-      char bb[INPUT_BUF];
-      memset(bb, 0, INPUT_BUF);
-      memmove(bb, 
-      input.buf + input.w,
-          input.len);
-      consclear();
-      consputs(bb);
-      input.len++;
-      input.buf[input.e++ % INPUT_BUF] = '~';
-      consputc('~');
+            consputc(' ');
+          for(uint i = 0; i < hist.last_arrow_idx; i++)
+        consputc('1');
+        // consputc('\n');
+        // consputs("a b c");
+        //           consputc('\n');
+        //           input.len = 0;
+        //   input.w = input.e;
+        //   wakeup(&input.r);
       break;
 
     case '*':  // Print buffer (just for testing)
@@ -400,20 +421,22 @@ consoleintr(int (*getc)(void))
       delete_last_word();
       break;
 
-    case 27: // Escape sequence for arrow history.
+    case 27: // Arrow keys
       if((c = getc()) == 91){
-        if((c = getc()) == 65){
-          consputc('U');
+        if((c = getc()) == 65){ // Arrow up
+          hist_up();
           break;
         }
-        else if (c == 66){
-          consputc('D');
+        else if (c == 66){ // Arrow down
+          hist_down();
           break;
         }
         else{
           input.buf[input.e++ % INPUT_BUF] = 27;
+          input.len++;
           consputc(27);
           input.buf[input.e++ % INPUT_BUF] = 91;
+          input.len++;
           consputc(91);
         }
       }
