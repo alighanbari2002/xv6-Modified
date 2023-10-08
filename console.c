@@ -342,24 +342,19 @@ add_hist()
   memmove(hist.cmd_buf[hist.hist_idx],
           input.buf + input.w,
           input.len - 1);
-  hist.last_arrow_idx = hist.hist_idx;
   hist.hist_idx = (hist.hist_idx + 1) % MAX_HIST_SIZE;
   hist.hist_size = (hist.hist_size >= MAX_HIST_SIZE) ? MAX_HIST_SIZE: hist.hist_size + 1;
+  hist.last_arrow_idx = hist.hist_idx;
   hist.is_suggestion_used = 0;
   hist.original_cmd_size = 0;
   memset(hist.original_cmd, 0, INPUT_BUF);
 }
 
-static uint
-circular_subtraction(uint num1, uint num2)
-{
-  return (num1 - num2 + MAX_HIST_SIZE) % MAX_HIST_SIZE;
-}
-
 static void
 hist_up()
 {
-  if(circular_subtraction(hist.hist_idx, hist.last_arrow_idx) >= hist.hist_size % MAX_HIST_SIZE){
+  if((hist.hist_idx - hist.last_arrow_idx + 1 + MAX_HIST_SIZE) % MAX_HIST_SIZE > 
+      hist.hist_size % MAX_HIST_SIZE){
     consputc('\a'); // beep
     return;
   }
@@ -371,6 +366,13 @@ hist_up()
 static void
 hist_down()
 {
+  if(){
+    consputc('\a'); // beep
+    return;
+  }
+  hist.last_arrow_idx = (hist.last_arrow_idx + 1) % MAX_HIST_SIZE;
+  consclear();
+  consputs(hist.cmd_buf[hist.last_arrow_idx]);
 }
 
 #define C(x)  ((x) - '@')  // Control-x
