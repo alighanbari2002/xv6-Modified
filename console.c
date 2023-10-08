@@ -366,7 +366,8 @@ hist_up()
 static void
 hist_down()
 {
-  if(){
+  if((hist.hist_idx - hist.last_arrow_idx - 1 + MAX_HIST_SIZE) % MAX_HIST_SIZE > 
+      hist.hist_size % MAX_HIST_SIZE){
     consputc('\a'); // beep
     return;
   }
