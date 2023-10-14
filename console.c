@@ -353,8 +353,10 @@ add_hist()
 static void
 hist_up()
 {
-  if((hist.hist_idx - hist.last_arrow_idx + 1 + MAX_HIST_SIZE) % MAX_HIST_SIZE > 
-      hist.hist_size % MAX_HIST_SIZE){
+  hist.last_arrow_idx = 0;
+  hist.hist_size = 0;
+  hist.hist_idx = 0;
+  if((int)(hist.last_arrow_idx - 1 - hist.hist_size + hist.hist_idx) < 0){
     consputc('\a'); // beep
     return;
   }
@@ -362,6 +364,29 @@ hist_up()
   consclear();
   consputs(hist.cmd_buf[hist.last_arrow_idx]);
 }
+
+// static void
+// hist_up()
+// {
+//   hist.last_arrow_idx = 0;
+//   hist.hist_idx = 0;
+//   hist.hist_size  = 0;
+//   // // release(&cons.lock);
+//   // // cprintf("Number: %d < %d\n", hist.last_arrow_idx - 1, hist.hist_size - hist.hist_idx);
+//   if((hist.last_arrow_idx - 1) < (hist.hist_size - hist.hist_idx)){
+//     consputc('A');
+    // consputc('\a'); // beep
+    // return;
+//   }
+//   // if((hist.hist_idx - hist.last_arrow_idx + 1 + MAX_HIST_SIZE) % MAX_HIST_SIZE > 
+//   //     hist.hist_size % MAX_HIST_SIZE){
+//   //   consputc('\a'); // beep
+//   //   return;
+//   // }
+// hist.last_arrow_idx = (hist.last_arrow_idx - 1 + MAX_HIST_SIZE) % MAX_HIST_SIZE;
+// consclear();
+// consputs(hist.cmd_buf[hist.last_arrow_idx]);
+// }
 
 static void
 hist_down()
@@ -393,15 +418,9 @@ consoleintr(int (*getc)(void))
       break;
 
     case 't':
-    release(&cons.lock);
-        cprintf("%d", (-1) % 4);
-        acquire(&cons.lock);
-        // consputc('\n');
-        // consputs("a b c");
-        //           consputc('\n');
-        //           input.len = 0;
-        //   input.w = input.e;
-        //   wakeup(&input.r);
+      if (-1 < 0){
+        consputc('\a'); // beep
+      }
       break;
 
     case '*':  // Print buffer (just for testing)
@@ -429,13 +448,13 @@ consoleintr(int (*getc)(void))
       delete_last_word();
       break;
 
-    case 27: // Arrow keys
-      if((c = getc()) == 91){
-        if((c = getc()) == 65){ // Arrow up
+    case '\033': // Arrow keys
+      if((c = getc()) == '['){
+        if((c = getc()) == 'A'){ // UP
           hist_up();
           break;
         }
-        else if (c == 66){ // Arrow down
+        else if (c == 'B'){ // DOWN
           hist_down();
           break;
         }
