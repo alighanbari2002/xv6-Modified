@@ -32,12 +32,16 @@ uint randGen(uint seed)
   return seed;
 }
 
+// In lottery choose between the processes that are RUNNABLE and are not being run already
 uint lotterySum()
 {
   uint sum = 0;
   for(int i = 0; i <= lotteryQueue.pi; i++)
   {
-    sum += lotteryQueue.proc[i]->ticket;
+    if(lotteryQueue.proc[i]->state == RUNNABLE)
+    {
+      sum += lotteryQueue.proc[i]->ticket; 
+    }
   }
   return sum;
 }
@@ -46,11 +50,14 @@ struct proc* lotteryWinner(uint luckyNumber)
 {
   for(int i = 0; i <= lotteryQueue.pi; i++)
   {
-    if(luckyNumber < lotteryQueue.proc[i]->ticket)
+    if(lotteryQueue.proc[i]->state == RUNNABLE)
     {
-      return lotteryQueue.proc[i];
+      if(luckyNumber < lotteryQueue.proc[i]->ticket)
+      {
+        return lotteryQueue.proc[i];
+      }
+      luckyNumber -= lotteryQueue.proc[i]->ticket;
     }
-    luckyNumber -= lotteryQueue.proc[i]->ticket;
   }
   return (void*)(0);
 }
@@ -211,6 +218,11 @@ userinit(void)
   lotteryQueue.proc[lotteryQueue.pi] = p;
   p->ticket = randGen(p->pid) % 100;
 
+  if(p->ticket <= 0)
+  {
+    panic("bad inital ticket\n");
+  }
+
   p->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -282,7 +294,11 @@ fork(void)
   lotteryQueue.pi++;
   lotteryQueue.proc[lotteryQueue.pi] = np;
   np->ticket = randGen(np->pid) % 100;
-  
+  if(np->ticket <= 0)
+  {
+    panic("bad initial ticket\n");
+  }
+
   np->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -496,23 +512,31 @@ scheduler(void)
     else if(lotteryQueue.pi >= 0)
     {
       uint cticks = ticks;
-      uint luckyNumber = randGen(cticks) % lotterySum();
-      p = lotteryWinner(luckyNumber);
-      if(p == (void*)(0))
-      {
-        panic("no winner of lottery found");
-      }
-      if(p->state == RUNNABLE)
-      {
-        foundProc = 1;
-      }
-      else if(p->state == RUNNING)
+      uint lotSum = lotterySum();
+      if(lotSum <= 0) // All processes in queue are running
       {
         foundProc = 0;
       }
       else
       {
-        panic("RUNNABLE not found\n");
+        uint luckyNumber = randGen(cticks) % lotSum;
+        p = lotteryWinner(luckyNumber);
+        if(p == (void*)(0))
+        {
+          panic("no winner of lottery found");
+        }
+        if(p->state == RUNNABLE)
+        {
+          foundProc = 1;
+        }
+        else if(p->state == RUNNING)
+        {
+          foundProc = 0;
+        }
+        else
+        {
+          panic("RUNNABLE not found\n");
+        }
       }
     }
     else if(FCFSQueue.pi >= 0)
