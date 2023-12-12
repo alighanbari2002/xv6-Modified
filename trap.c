@@ -107,6 +107,11 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER)
     {
+      // For debugging
+      // cprintf("process: %s, pid: %d, queue: %d, runtime: %d\n",
+      // myproc()->name,
+      // myproc()->pid, myproc()->qType,
+      // myproc()->runningTicks);
       myproc()->runningTicks++;
       if(myproc()->qType == RR && myproc()->runningTicks >= TIME_SLOT)
       {

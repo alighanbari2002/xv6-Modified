@@ -39,7 +39,7 @@ uint lotterySum()
   uint sum = 0;
   for(int i = 0; i <= lotteryQueue.pi; i++)
   {
-    sum = lotteryQueue.proc[i]->ticket;
+    sum += lotteryQueue.proc[i]->ticket;
   }
   return sum;
 }
