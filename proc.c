@@ -23,15 +23,13 @@ struct queue FCFSQueue;
 
 uint randGen(uint seed)
 {
+  static int randfactor = 0;
   uint cticks = ticks;
-  seed += cticks;
-  seed <<= 5;
-  seed /= 13;
-  seed <<= 1;
-  seed *= 17;
+  seed *= (cticks << 2);
   seed >>= 2;
-  seed -= cticks / 3;
-  return seed / 3;
+  seed += 13 + (cticks << 1) + (randfactor++);
+  seed += cticks;
+  return seed;
 }
 
 uint lotterySum()
