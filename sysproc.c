@@ -106,7 +106,7 @@ sys_change_queue(void)
   int queueID;
   if(argint(0, &pid) < 0 ||
     argint(1, &queueID) < 0 ||
-    (queueID != DEF &&
+    (/*queueID != DEF &&*/
     queueID != RR &&
     queueID != LOTTERY &&
     queueID != FCFS))

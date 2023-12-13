@@ -973,9 +973,9 @@ void change_queue(int pid, int queueID)
   }
   switch(queueID)
   {
-    case DEF:
-      p->qType = DEF;
-      break;
+    // case DEF:
+    //   p->qType = DEF;
+    //   break;
     case RR:
       p->qType = RR;
       if(p->state == RUNNABLE)
