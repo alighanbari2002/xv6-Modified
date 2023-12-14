@@ -296,7 +296,8 @@ fork(void)
   np->ticket = randGen(np->pid) % 100;
   if(np->ticket <= 0)
   {
-    panic("bad initial ticket\n");
+    // panic("bad initial ticket\n");
+    np->ticket = 1;
   }
 
   np->state = RUNNABLE;
@@ -710,7 +711,15 @@ sleep(void *chan, struct spinlock *lk)
     acquire(&ptable.lock);  //DOC: sleeplock1
     release(lk);
   }
-  cleanupCorresQueue(p);
+
+  // Process did not get the chance to
+  // change its queue because it was running
+  // so it must not be removed from a queue
+  // that it wasn't even added to
+  if(!p->changeQueueRunning)
+  {
+    cleanupCorresQueue(p);
+  }
   // Cleanup from queue on sleep
   // Go to sleep.
   p->chan = chan;
@@ -920,7 +929,7 @@ void print_proc(void)
     char ticks_holder[TICKS_LEN+1];
     cprintf("%s %s  %s %d      %s %s     %s\n",
             wrap_space(p->name, name_holder, NAME_LEN), wrap_spacei(p->pid, pid_holder, PID_LEN),
-            states[p->state], p->qType-RR, wrap_spacei(p->arriveTime, at_holder, AT_LEN), 
+            states[p->state], p->qType, wrap_spacei(p->arriveTime, at_holder, AT_LEN), 
             wrap_spacei(p->ticket, ticket_holder, TICKET_LEN), wrap_spacei(p->runningTicks, ticks_holder, TICKS_LEN));
   }
   release(&ptable.lock);
