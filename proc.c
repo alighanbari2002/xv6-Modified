@@ -507,7 +507,7 @@ scheduler(void)
       }
       else
       {
-        panic("RUNNABLE not found\n");
+        panic("RR RUNNABLE not found\n");
       }
     }
     else if(lotteryQueue.pi >= 0)
@@ -536,7 +536,7 @@ scheduler(void)
         }
         else
         {
-          panic("RUNNABLE not found\n");
+          panic("Lottery RUNNABLE not found\n");
         }
       }
     }
@@ -561,7 +561,7 @@ scheduler(void)
       }
       else
       {
-        panic("RUNNABLE not found\n");
+        panic("FCFS RUNNABLE not found\n");
       }
     }
     else
@@ -719,6 +719,10 @@ sleep(void *chan, struct spinlock *lk)
   if(!p->changeQueueRunning)
   {
     cleanupCorresQueue(p);
+  }
+  else
+  {
+    p->changeQueueRunning = 0;
   }
   // Cleanup from queue on sleep
   // Go to sleep.
