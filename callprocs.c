@@ -14,13 +14,13 @@ int main(int argc, char* argv[])
         switch((int)(first))
         {
             case (int)('p'):
-                print_proc();
+                printProc();
                 break;
             case (int)('t'):
-                init_ticket(atoi(argv[2]), atoi(argv[3]));
+                initTicket(atoi(argv[2]), atoi(argv[3]));
                 break;
             case (int)('c'):
-                change_queue(atoi(argv[2]), atoi(argv[3]));
+                changeQueue(atoi(argv[2]), atoi(argv[3]));
                 break;
             default:
                 printf(1, "unknown\n");

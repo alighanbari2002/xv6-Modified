@@ -91,16 +91,16 @@ sys_uptime(void)
 }
 
 void
-sys_print_proc(void)
+sys_printProc(void)
 {
   // since ptable is only accessible in proc.c
   // we need yet another wrapper or
   // could've used extern keyword
-  print_proc();
+  printProc();
 }
 
 int
-sys_change_queue(void)
+sys_changeQueue(void)
 {
   int pid;
   int queueID;
@@ -113,12 +113,12 @@ sys_change_queue(void)
   {
     return -1;
   }
-  change_queue(pid, queueID);
+  changeQueue(pid, queueID);
   return 0;
 }
 
 int
-sys_init_ticket(void)
+sys_initTicket(void)
 {
   int pid;
   uint ticket;
@@ -128,6 +128,6 @@ sys_init_ticket(void)
   {
     return -1;
   }
-  init_ticket(pid, ticket);
+  initTicket(pid, ticket);
   return 0;
 }

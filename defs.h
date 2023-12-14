@@ -120,10 +120,10 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-void            print_proc(void);
+void            printProc(void);
 void            agingMechanism(void);
-void            change_queue(int, int);
-void            init_ticket(int, uint);
+void            changeQueue(int, int);
+void            initTicket(int, uint);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

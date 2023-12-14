@@ -871,7 +871,7 @@ procdump(void)
   }
 }
 
-char* wrap_space(char* inp, char* holder, const int len)
+char* wrapSpace(char* inp, char* holder, const int len)
 {
   memset(holder, ' ', len);
   holder[len] = 0;
@@ -887,7 +887,7 @@ char* wrap_space(char* inp, char* holder, const int len)
   return holder;
 }
 
-char* wrap_spacei(int inp, char* holder, const int len)
+char* wrapSpaceInt(int inp, char* holder, const int len)
 {
   if(inp < 0)
   {
@@ -919,7 +919,7 @@ char* wrap_spacei(int inp, char* holder, const int len)
 #define TICKET_LEN 3
 #define TICKS_LEN 6
 
-void print_proc(void)
+void printProc(void)
 {
   struct proc* p;
   char *states[] = {
@@ -943,9 +943,9 @@ void print_proc(void)
     char ticket_holder[TICKET_LEN+1];
     char ticks_holder[TICKS_LEN+1];
     cprintf("%s %s  %s %d      %s %s     %s\n",
-            wrap_space(p->name, name_holder, NAME_LEN), wrap_spacei(p->pid, pid_holder, PID_LEN),
-            states[p->state], p->qType, wrap_spacei(p->arriveTime, at_holder, AT_LEN), 
-            wrap_spacei(p->ticket, ticket_holder, TICKET_LEN), wrap_spacei(p->runningTicks, ticks_holder, TICKS_LEN));
+            wrapSpace(p->name, name_holder, NAME_LEN), wrapSpaceInt(p->pid, pid_holder, PID_LEN),
+            states[p->state], p->qType, wrapSpaceInt(p->arriveTime, at_holder, AT_LEN), 
+            wrapSpaceInt(p->ticket, ticket_holder, TICKET_LEN), wrapSpaceInt(p->runningTicks, ticks_holder, TICKS_LEN));
   }
   release(&ptable.lock);
 }
@@ -974,7 +974,7 @@ void agingMechanism(void)
   release(&ptable.lock);
 }
 
-void change_queue(int pid, int queueID)
+void changeQueue(int pid, int queueID)
 {
   struct proc* p;
   acquire(&ptable.lock);
@@ -1035,7 +1035,7 @@ void change_queue(int pid, int queueID)
   release(&ptable.lock);
 }
 
-void init_ticket(int pid, uint ticket)
+void initTicket(int pid, uint ticket)
 {
   struct proc* p;
   acquire(&ptable.lock);

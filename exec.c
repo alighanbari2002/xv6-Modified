@@ -104,7 +104,7 @@ exec(char *path, char **argv)
   if(strncmp("callprocs", curproc->name, sizeof("callprocs")) != 0 &&
     strncmp("sh", curproc->name, sizeof("sh")) != 0)
   {
-    change_queue(curproc->pid, 2);
+    changeQueue(curproc->pid, 2);
   }
   return 0;
 
