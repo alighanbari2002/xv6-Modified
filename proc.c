@@ -299,12 +299,9 @@ fork(void)
   else
   {
     // Default scheduling queue  
-    // np->qType = LOTTERY;
-    // lotteryQueue.pi++;
-    // lotteryQueue.proc[lotteryQueue.pi] = np;
-    np->qType = FCFS;
-    FCFSQueue.pi++;
-    FCFSQueue.proc[FCFSQueue.pi] = np;
+    np->qType = LOTTERY;
+    lotteryQueue.pi++;
+    lotteryQueue.proc[lotteryQueue.pi] = np;
   }
 
   np->ticket = randGen(np->pid) % 100;
@@ -313,7 +310,7 @@ fork(void)
     // panic("bad initial ticket\n");
     np->ticket = 1;
   }
-  
+
   np->state = RUNNABLE;
 
   release(&ptable.lock);
