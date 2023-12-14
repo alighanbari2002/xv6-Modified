@@ -101,6 +101,12 @@ exec(char *path, char **argv)
   curproc->tf->esp = sp;
   switchuvm(curproc);
   freevm(oldpgdir);
+  if(strncmp("callprocs", curproc->name, sizeof("callprocs")) != 0 &&
+    strncmp("sh", curproc->name, sizeof("sh")) != 0)
+  {
+    // cprintf("hi:%s\n", curproc->name);s
+    change_queue(curproc->pid, 3);
+  }
   return 0;
 
  bad:

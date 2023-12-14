@@ -289,17 +289,31 @@ fork(void)
 
   acquire(&ptable.lock);
 
-  // Default scheduling queue
-  np->qType = LOTTERY;
-  lotteryQueue.pi++;
-  lotteryQueue.proc[lotteryQueue.pi] = np;
+  if(np->parent->pid == 2)
+  {
+    // For processes that come from shell (they will go to exec!)
+    np->qType = RR;
+    rrQueue.pi++;
+    rrQueue.proc[rrQueue.pi] = np;
+  }
+  else
+  {
+    // Default scheduling queue  
+    // np->qType = LOTTERY;
+    // lotteryQueue.pi++;
+    // lotteryQueue.proc[lotteryQueue.pi] = np;
+    np->qType = FCFS;
+    FCFSQueue.pi++;
+    FCFSQueue.proc[FCFSQueue.pi] = np;
+  }
+
   np->ticket = randGen(np->pid) % 100;
   if(np->ticket <= 0)
   {
     // panic("bad initial ticket\n");
     np->ticket = 1;
   }
-
+  
   np->state = RUNNABLE;
 
   release(&ptable.lock);

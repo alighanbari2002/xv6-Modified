@@ -31,6 +31,7 @@ main(void)
       printf(1, "init: exec sh failed\n");
       exit();
     }
+    change_queue(pid, 1);
     while((wpid=wait()) >= 0 && wpid != pid)
       printf(1, "zombie!\n");
   }
